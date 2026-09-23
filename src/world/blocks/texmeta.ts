@@ -37,14 +37,14 @@ export const TEX_META: Record<string, TexMeta> = {
   stone: { material: 'stone' },
   deepslate: { material: 'stone' },
   snow: { randomRotate: true, material: 'snow' },
-  glowstone: { emissive: 1, material: 'emissive' },
-  lumita: { emissive: 1, material: 'emissive' },
-  fulgor_lamp_on: { emissive: 1, material: 'emissive' },
+  glowstone: { material: 'emissive' },
+  lumita: { material: 'emissive' },
+  fulgor_lamp_on: { material: 'emissive' },
   jack_o_lantern: { material: 'plant' },
-  sea_lantern: { emissive: 1, material: 'emissive' },
+  sea_lantern: { material: 'emissive' },
   torch: { material: 'emissive' },
   lantern: { material: 'metal' },
-  shroomlight: { emissive: 1, material: 'emissive' },
+  shroomlight: { material: 'emissive' },
 };
 
 export function texMeta(name: string): TexMeta {

@@ -192,3 +192,20 @@ Presets **Baixo/Médio/Alto/Ultra** controlam resolução de sombra, nº de casc
   gerado isoladamente em qualquer worker e o resultado é idêntico independentemente da ordem de carregamento.
 - **D-006 — Interface em DOM/CSS**, com ícones de itens gerados num atlas (canvas 2D) e usados como sprites CSS.
 - **D-007 — Alcance: 4,5 blocos (blocos) e 3 (entidades) no Sobrevivência; 5 no Criativo** (regras 1.20.5+).
+- **D-008 — Física do jogador copiada do algoritmo do original** (LivingEntity.travel/Entity.move): atrito do bloco × 0,91,
+  aceleração `velocidade × 0,216/atrito³` no chão e 0,02 no ar, gravidade 0,08 com arrasto 0,98, pulo 0,42, degrau 0,6,
+  recuo na beirada ao agachar em passos de 0,05. Testes (`tests/unit/physics.test.ts`) conferem 4,317 m/s andando,
+  5,612 correndo, ~1,3 agachado, 10,89 voando e ~1,25 de altura de pulo.
+- **D-009 — Queda: o dano usa a distância acumulada antes do tick do pouso** (exatamente como o original), por isso uma
+  queda "de 23 blocos" pode dar 19 ou 20 de dano conforme a fase do movimento; 25 blocos sempre matam.
+- **D-010 — Plantas aquáticas "encharcadas"** (alga, capim-marinho) têm a flag `F_WATERLOGGED`: a célula renderiza água
+  junto do modelo e a física trata como água parada, sem precisar de estados extras.
+- **D-011 — Texturas e sprites pintados por código com um kit próprio** (`Tex`: paletas, ruídos periódicos, mapas ASCII)
+  que também gera altura (normal map) e material por pixel (suavidade, metal, porosidade, emissão) para o PBR.
+  A pintura foi paralelizada em grupos; `scripts/texsheet.mjs` gera folhas de contato para revisão visual.
+- **D-012 — Ícones**: blocos em isométrico desenhados em canvas 2D a partir das próprias texturas; itens com sprite 16×16.
+  Os mesmos sprites viram itens 3D "extrudados" (frente, verso e bordas por pixel) na mão e no chão.
+- **D-013 — Receitas próprias onde faltam itens equivalentes** (marcadas no código): biscoito sem cacau, andaime sem
+  bambu, tinta preta de carvão, tinta marrom de cogumelo, lanterna do mar com pó de lumita, farol com o coração do chefe,
+  ferramentas ígneas na bancada (diamante + lingote ígneo) em vez da mesa de ferraria.
+- **D-014 — Fome aparece como "coxinhas"** no HUD (ícone próprio), mantendo os números do original.

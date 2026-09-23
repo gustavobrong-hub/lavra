@@ -14,6 +14,9 @@ import { ItemStack } from './items/stack';
 import { blockDrops, type ToolContext } from './loot/blockdrops';
 import type { Entity } from './entity/entity';
 import type { Difficulty } from './player/food';
+import type { Player } from './player/player';
+import { skyDarkenFor } from '../render/skymodel';
+import { BIOMES } from '../world/gen/biomes';
 
 export interface LevelEvent { type: string; [k: string]: unknown }
 export type BlockBehavior = {
@@ -46,7 +49,14 @@ const DX = [0, 0, 0, 0, -1, 1], DY = [-1, 1, 0, 0, 0, 0], DZ = [0, 0, -1, 1, 0, 
 export class Level implements FallingHost {
   readonly entities = new EntityManager();
   readonly scheduler = new TickScheduler();
+  readonly players: Player[] = [];
   gameTime = 0;
+  /** hora do dia em ticks (0 = amanhecer, 6000 = meio-dia) */
+  dayTime = 0;
+  rainLevel = 0;
+  thunderLevel = 0;
+  /** escurecimento do céu 0..11 (0 = meio-dia), recalculado a cada tick */
+  skyDarken = 0;
   difficulty: Difficulty = 'normal';
   readonly rules: GameRules = {
     doDaylightCycle: true, doMobSpawning: true, keepInventory: false, naturalRegeneration: true,
@@ -57,6 +67,10 @@ export class Level implements FallingHost {
   private readonly behaviors = new Map<number, BlockBehavior>();
   private processing = false;
   rng = Math.random;
+  /** entidades de bloco que precisam de tick (fornalhas acesas etc.), chave "x,y,z" */
+  readonly activeBE = new Set<string>();
+  /** tick de entidade de bloco (registrado por quem conhece o tipo) */
+  beTicker?: (level: Level, x: number, y: number, z: number) => boolean;
 
   constructor(readonly world: World) {
     world.onBlockChange((x, y, z, o, n) => this.onChanged(x, y, z, o, n));
@@ -202,8 +216,40 @@ export class Level implements FallingHost {
     this.entities.add(fb);
   }
 
+  // ------------------------------------------------------------ tempo, céu e jogadores
+  updateSky(): void { this.skyDarken = skyDarkenFor(this.dayTime, this.rainLevel, this.thunderLevel); }
+  isDay(): boolean { return this.skyDarken < 4; }
+  canSeeSky(x: number, y: number, z: number): boolean { return y >= this.world.heightAt(x, z); }
+  /** Chuva caindo neste bloco (céu aberto, bioma com chuva, não neve). */
+  isRainingAt(x: number, y: number, z: number): boolean {
+    if (this.rainLevel < 0.2 || !this.canSeeSky(x, y, z)) return false;
+    const c = this.world.getChunk(x >> 4, z >> 4);
+    if (!c) return false;
+    const b = BIOMES[c.biomes[((z & 15) << 4) | (x & 15)]];
+    if (b.precipitation !== 'rain') return false;
+    // temperatura cai com a altitude acima de y=80 (0,00125 por bloco): lá em cima neva
+    return b.temp - Math.max(0, y - 80) * 0.00125 >= 0.15;
+  }
+  /** Luz combinada no bloco (como getMaxLocalRawBrightness). */
+  brightness(x: number, y: number, z: number): number { return this.world.getBrightness(x, y, z, this.skyDarken); }
+
+  nearestPlayer(x: number, y: number, z: number, r: number, filter?: (p: Player) => boolean): Player | null {
+    let best: Player | null = null, bd = r * r;
+    for (const p of this.players) {
+      if (p.removed || (filter && !filter(p))) continue;
+      const d = p.distanceSq(x, y, z);
+      if (d <= bd || r < 0) { bd = d; best = p; if (r < 0) r = Math.sqrt(d); }
+    }
+    return best;
+  }
+
   // ------------------------------------------------------------ tick
   tickBlocks(): void {
+    if (this.beTicker) for (const k of [...this.activeBE]) {
+      const [x, y, z] = k.split(',').map(Number);
+      if (!this.world.isLoaded(x, z)) continue;
+      if (!this.beTicker(this, x, y, z)) this.activeBE.delete(k);
+    }
     for (const e of this.scheduler.due(this.gameTime, 4096)) {
       const s = this.world.getBlock(e.x, e.y, e.z);
       if (BLOCK_OF[s] !== e.block) continue;

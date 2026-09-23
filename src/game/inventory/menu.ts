@@ -58,6 +58,8 @@ export abstract class Menu {
   }
 
   changed(): void { this.version++; }
+  /** Recalcula resultados (crafting) e avisa a interface. */
+  refresh(): void { this.onSlotsChanged(); this.changed(); }
 
   /** Regras de shift-clique de cada menu. */
   protected abstract quickMove(index: number): void;

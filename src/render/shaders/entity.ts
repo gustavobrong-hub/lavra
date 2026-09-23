@@ -81,14 +81,23 @@ void main() {
 #else
   vec4 albedo = texture(uMap, vUv);
 #endif
+#ifdef TRANSLUCENT
+  if (albedo.a < 0.02) discard;
+#else
   if (albedo.a < 0.5) discard;
+#endif
   albedo.rgb *= uTint;
+  // vermelho de dano / clarão: tinge o material antes da luz (respeita a escuridão)
+  albedo.rgb = mix(albedo.rgb, uOverlay.rgb, uOverlay.a);
   vec3 N = normalize(vN);
   vec3 V = normalize(-vRel);
   vec3 color = surfaceLight(albedo.rgb, N, uLight.x, uLight.y, 1.0, 1.0, 0.25, 0.0, 0.5, V, uEmissive);
-  color = mix(color, uOverlay.rgb * max(0.2, lightCurve(max(uLight.x, uLight.y))), uOverlay.a);
   color = applyFog(color, vRel);
+#ifdef TRANSLUCENT
+  outColor = vec4(color, albedo.a * uAlpha);
+#else
   outColor = vec4(color, uAlpha);
+#endif
   outNormal = vec4(N * 0.5 + 0.5, 0.25);
 }
 `;

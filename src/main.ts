@@ -38,6 +38,15 @@ function boot(): void {
   }
   if (params.has('debug')) game.debug.toggle();
   (window as unknown as { __lavra: unknown }).__lavra = { game };
+  const gallery = params.get('gallery');
+  if (gallery) {
+    const wait = setInterval(async () => {
+      if (!game.ready) return;
+      clearInterval(wait);
+      const { setupGallery } = await import('./tools/gallery');
+      (window as unknown as { __gallery: unknown }).__gallery = setupGallery(game, gallery, parseFloat(params.get('zoom') ?? '1'));
+    }, 100);
+  }
   canvas.addEventListener('click', () => game.input.requestLock());
   game.start();
 }

@@ -3,6 +3,7 @@
  * (entidades, partículas, pós-processamento). Cena em HDR (RGBA16F) com MRT (cor + normais).
  */
 import * as THREE from 'three';
+import { blockArrayTexture } from './entities/shared';
 import { FrameUBO } from './gl/frameubo';
 import { GLProgram } from './gl/program';
 import { ChunkRenderer } from './chunks/chunkrenderer';
@@ -88,6 +89,7 @@ export class Pipeline {
     this.frame = new FrameUBO(gl);
     this.textureData = buildTextureArrays();
     this.textures = uploadBlockTextures(gl, this.textureData, Math.min(8, this.caps.anisotropy));
+    blockArrayTexture(this.textureData); // atlas de blocos para itens, blocos caindo e criaturas
     this.chunks = new ChunkRenderer(gl, this.textures);
     this.skyProg = new GLProgram(gl, 'ceu', FULLSCREEN_VS, SKY_FS);
     this.skyProg.bindBlock('Frame', FrameUBO.BINDING);

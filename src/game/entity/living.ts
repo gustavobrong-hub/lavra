@@ -58,6 +58,13 @@ export abstract class Living extends Entity {
   prevAttackAnim = 0;
   swinging = false;
   swingTime = 0;
+  /** quem causou o último dano (para revidar/fugir) e quando */
+  lastHurtBy: Living | null = null;
+  lastHurtTime = -1000;
+  /** ticks restantes em que a morte conta como "pelo jogador" (XP e drops raros) */
+  lastHurtByPlayerTime = 0;
+  /** alvo do último ataque desta entidade */
+  lastHurtMob: Living | null = null;
 
   constructor(host: EntityHost) { super(host); }
 
@@ -258,9 +265,28 @@ export abstract class Living extends Entity {
     const res = this.effectLevel('resistance');
     if (res && src.type !== 'void' && src.type !== 'kill') dmg *= Math.max(0, 1 - 0.2 * res);
     dmg = this.applyArmor(dmg, src);
-    if (this.invulnerableTime > 10) { dmg -= this.lastHurt; this.lastHurt = amount; }
+    dmg = this.applyProtection(dmg, src);
+    let fresh = true;
+    if (this.invulnerableTime > 10) { dmg -= this.lastHurt; this.lastHurt = amount; fresh = false; }
     else { this.lastHurt = amount; this.invulnerableTime = 20; this.hurtTime = this.hurtDuration; }
-    if (dmg <= 0) return false;
+    // quem bateu
+    const a = src.attacker;
+    if (a && a instanceof Living && a !== this) {
+      this.lastHurtBy = a;
+      this.lastHurtTime = this.age;
+      if (a.type === 'player') this.lastHurtByPlayerTime = 100;
+      else if ((a as { ownerId?: number }).ownerId) this.lastHurtByPlayerTime = 100;
+    }
+    // empurrão (só no golpe "novo")
+    if (fresh && src.type !== 'fall' && src.type !== 'drown' && src.type !== 'starve' && src.type !== 'magic' && src.type !== 'onFire' && src.type !== 'suffocate' && src.type !== 'void') {
+      const from = src.from ?? (a ? [a.x, a.y, a.z] : null);
+      if (from) {
+        let dx = from[0] - this.x, dz = from[2] - this.z;
+        while (dx * dx + dz * dz < 1e-4) { dx = (Math.random() - Math.random()) * 0.01; dz = (Math.random() - Math.random()) * 0.01; }
+        this.knockback(0.4, dx, dz);
+      }
+    }
+    if (dmg <= 0) return fresh;
     const abs = Math.min(this.absorption, dmg);
     this.absorption -= abs;
     dmg -= abs;
@@ -269,6 +295,9 @@ export abstract class Living extends Entity {
     if (this.health <= 0) { this.health = 0; this.die(src); }
     return true;
   }
+
+  /** Redução por encantamentos de proteção (sobrescrita pelo jogador). */
+  protected applyProtection(amount: number, _src: DamageSource): number { return amount; }
 
   protected onHurt(_src: DamageSource, _dmg: number): void { /* som, partículas */ }
 

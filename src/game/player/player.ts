@@ -47,6 +47,11 @@ export class Player extends Living {
   score = 0;
   sleepTimer = 0;
   sleeping = false;
+  /** escudo erguido (clique direito segurando escudo) */
+  blocking = false;
+  /** recarga de arremesso (bola de neve, pérola) */
+  throwCooldown = 0;
+  shieldDamage?: (amount: number) => void;
   /** efeito de FOV suavizado */
   fovMod = 1;
   prevFovMod = 1;
@@ -54,6 +59,15 @@ export class Player extends Living {
   /** 0..1 carregamento do arco/comida em uso */
   usingItemTicks = 0;
   usingItem = false;
+  /** ticks desde o último ataque (recarga) */
+  attackStrengthTicker = 0;
+  private lastHeldKey = '';
+  /** montaria atual */
+  vehicle: import('../entity/mob').Mob | null = null;
+  /** flechas presas no corpo (visual) */
+  arrowsStuck = 0;
+  /** dificuldade do mundo (escala o dano de criaturas) */
+  difficulty: 'peaceful' | 'easy' | 'normal' | 'hard' = 'normal';
 
   constructor(host: EntityHost) {
     super(host);
@@ -139,7 +153,31 @@ export class Player extends Living {
     this.prevBodyYaw = this.bodyYaw;
     if (this.invulnerableTime > 0) this.invulnerableTime--;
     if (this.hurtTime > 0) this.hurtTime--;
+    // recarga do ataque (zera ao trocar de item)
+    this.attackStrengthTicker++;
+    if (this.throwCooldown > 0) this.throwCooldown--;
+    const h = this.inventory.held;
+    const key = h ? `${h.id}:${this.inventory.selected}` : `-:${this.inventory.selected}`;
+    if (key !== this.lastHeldKey) { this.lastHeldKey = key; this.attackStrengthTicker = 0; }
+    if (this.lastHurtBy && (this.lastHurtBy.dead || this.lastHurtBy.removed || this.age - this.lastHurtTime > 100)) this.lastHurtBy = null;
     this.updateFluids();
+    if (this.vehicle) {
+      // montado: a posição segue a sela
+      const v = this.vehicle;
+      if (v.removed || v.dead || v.passenger !== this) { this.vehicle = null; }
+      else {
+        this.setPosKeepPrev(v.x, v.y + v.height * 0.75 - 0.35, v.z);
+        this.vx = v.vx; this.vy = v.vy; this.vz = v.vz;
+        this.fallDistance = 0;
+        this.onGround = v.onGround;
+        this.updateSwing();
+        this.tickEffects();
+        this.eyeY += (this.eyeHeight() - this.eyeY) * 0.5;
+        this.yawHead = this.yaw;
+        this.bodyYaw = v.bodyYaw;
+        return;
+      }
+    }
     if (this.flying) {
       const vy0 = this.vy;
       super.aiStep();
@@ -189,10 +227,57 @@ export class Player extends Living {
     return blockNameCache(s);
   }
 
+  /** Move sem perder a posição anterior (interpolação suave na montaria). */
+  setPosKeepPrev(x: number, y: number, z: number): void { this.x = x; this.y = y; this.z = z; }
+
+  lastDamageType = 'generic';
   override hurt(src: DamageSource, amount: number): boolean {
     if (this.invulnerable && src.type !== 'void' && src.type !== 'kill') return false;
+    if (this.dead) return false;
+    // dano de criaturas escala com a dificuldade (fácil: metade + 1; difícil: ×1,5)
+    if (src.attacker && src.attacker !== this && src.attacker.type !== 'player' && src.type !== 'magic') {
+      if (this.difficulty === 'peaceful') amount = 0;
+      else if (this.difficulty === 'easy') amount = Math.min(amount / 2 + 1, amount);
+      else if (this.difficulty === 'hard') amount = amount * 1.5;
+      if (amount <= 0) return false;
+    }
+    // escudo erguido bloqueia golpes de frente
+    if (this.blocking && src.type !== 'fall' && src.type !== 'drown' && src.type !== 'starve' && !src.bypassArmor) {
+      const from = src.from ?? (src.attacker ? [src.attacker.x, src.attacker.y, src.attacker.z] : null);
+      if (from) {
+        const [lx, , lz] = this.lookVec();
+        const dx = from[0] - this.x, dz = from[2] - this.z;
+        const d = Math.hypot(dx, dz) || 1;
+        if ((dx / d) * lx + (dz / d) * lz > 0) {
+          this.host.emit?.('shieldBlock', { x: this.x, y: this.y, z: this.z, amount });
+          if (src.attacker && src.type === 'mob') (src.attacker as Living).knockback(0.5, this.x - src.attacker.x, this.z - src.attacker.z);
+          this.shieldDamage?.(amount);
+          return false;
+        }
+      }
+    }
+    // proteção contra queda das botas (Pluma)
+    if (src.type === 'fall') {
+      const ff = this.inventory.armor[0]?.enchantLevel('feather_falling') ?? 0;
+      if (ff) amount *= 1 - Math.min(0.8, ff * 0.12);
+    }
     const ok = super.hurt(src, amount);
-    if (ok) this.food.addExhaustion(0.1);
+    if (ok) {
+      this.food.addExhaustion(0.1);
+      this.lastDamageType = src.type;
+      this.host.emit?.('playerHurt', { type: src.type, amount });
+      // armadura se desgasta
+      if (!src.bypassArmor && src.type !== 'fall' && src.type !== 'drown' && src.type !== 'starve') {
+        const d = Math.max(1, Math.floor(amount / 4));
+        for (let i = 0; i < 4; i++) {
+          const a = this.inventory.armor[i];
+          if (!a || !a.damageable) continue;
+          a.damage += d;
+          if (a.damage >= a.maxDamage) this.inventory.armor[i] = null;
+        }
+        this.inventory.changed();
+      }
+    }
     return ok;
   }
 }

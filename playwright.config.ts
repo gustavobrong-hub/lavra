@@ -9,16 +9,16 @@ export default defineConfig({
   reporter: [['list']],
   outputDir: 'tests/e2e/.results',
   use: {
-    baseURL: 'http://localhost:5174',
+    baseURL: 'http://localhost:5175',
     viewport: { width: 1280, height: 720 },
     launchOptions: {
       args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-unsafe-webgpu'],
     },
   },
   webServer: {
-    command: 'npx vite --port 5174',
-    url: 'http://localhost:5174',
-    reuseExistingServer: true,
+    command: 'LAVRA_NOHMR=1 npx vite',
+    url: 'http://localhost:5175',
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });
