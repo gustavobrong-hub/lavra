@@ -28,9 +28,14 @@ function boot(): void {
   const time = params.has('time') ? parseInt(params.get('time')!, 10) : 1000;
   const spawnParam = params.get('pos');
   const spawn = spawnParam ? (spawnParam.split(',').map(Number) as [number, number, number]) : undefined;
-  const game = new Game(canvas, ui, settings, { seed, time, spawn });
-  if (params.has('pitch')) game.pitch = parseFloat(params.get('pitch')!) * Math.PI / 180;
-  if (params.has('yaw')) game.yaw = parseFloat(params.get('yaw')!) * Math.PI / 180;
+  const mode = (params.get('mode') as 'survival' | 'creative' | null) ?? 'survival';
+  const game = new Game(canvas, ui, settings, { seed, time, spawn, mode });
+  if (params.has('pitch')) game.pitch = parseFloat(params.get('pitch')!);
+  if (params.has('yaw')) game.yaw = parseFloat(params.get('yaw')!);
+  if (params.has('kit')) {
+    for (const id of ['stone', 'oak_planks', 'oak_log', 'glass', 'torch', 'oak_stairs', 'oak_slab', 'oak_door', 'sand']) game.give(id, 64);
+    game.give('diamond_pickaxe'); game.give('diamond_shovel'); game.give('diamond_axe');
+  }
   if (params.has('debug')) game.debug.toggle();
   (window as unknown as { __lavra: unknown }).__lavra = { game };
   canvas.addEventListener('click', () => game.input.requestLock());

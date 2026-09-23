@@ -22,6 +22,8 @@ export const F_LAVA = 512;
 export const F_FULL_CUBE_COLLISION = 1024;
 export const F_AIR = 2048;
 export const F_LEAVES = 4096;
+/** planta aquática: a célula também contém água (alga, capim-marinho) */
+export const F_WATERLOGGED = 8192;
 
 export const SHAPE_IDS: Record<ShapeKind, number> = (() => {
   const kinds: ShapeKind[] = [

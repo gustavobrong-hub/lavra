@@ -74,7 +74,7 @@ export class WorldStreamer {
   update(budgetMs = 6): void {
     const t0 = performance.now();
     const R = this.renderDistance;
-    const loadR = R + 1;
+    const loadR = R + 2; // vizinho diagonal de uma coluna na borda (R+0,5+√2) precisa estar carregado
     const W = this.world;
 
     // 1) lista de colunas desejadas (recalcula quando o jogador muda de chunk)

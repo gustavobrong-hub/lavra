@@ -12,6 +12,13 @@ import { FULLSCREEN_VS, SKY_FS } from './shaders/sky';
 import { FXAA_FS, POST_VS, TONEMAP_FS } from './shaders/post';
 import { computeSky, type SkyState } from './skymodel';
 import type { GraphicsSettings } from '../settings';
+import { syncShared } from './entities/shared';
+
+export interface ThreeLayers {
+  opaque?: THREE.Scene;
+  translucent?: THREE.Scene;
+  hand?: { scene: THREE.Scene; camera: THREE.Camera };
+}
 
 export interface FrameInput {
   camX: number; camY: number; camZ: number;
@@ -196,11 +203,12 @@ export class Pipeline {
     F.upload();
   }
 
-  render(f: FrameInput, renderDistance: number, drawThree?: (pass: 'opaque' | 'translucent') => void): void {
+  render(f: FrameInput, renderDistance: number, layers: ThreeLayers = {}): void {
     const t0 = performance.now();
     const gl = this.gl;
     const r = this.renderer;
     this.updateFrame(f, renderDistance);
+    syncShared(this.frame);
     this.chunks.computeVisible(f.camX, f.camY, f.camZ, renderDistance, { planes: this.planes }, this.settings.caveCulling);
 
     // ---------------------------------------------------------- cena opaca
@@ -223,9 +231,9 @@ export class Pipeline {
     gl.bindVertexArray(null);
     gl.depthMask(true);
     r.resetState();
-    if (drawThree) {
+    if (layers.opaque) {
       r.setRenderTarget(this.hdr);
-      drawThree('opaque');
+      r.render(layers.opaque, this.camera);
     }
 
     // ---------------------------------------------------------- cópia para refração
@@ -245,9 +253,14 @@ export class Pipeline {
     this.chunks.drawWater(f.camX, f.camY, f.camZ, C.tex[0], C.depth!, this.camera.near, this.camera.far, this.settings.ssr);
     this.chunks.drawTranslucent(f.camX, f.camY, f.camZ);
     r.resetState();
-    if (drawThree) {
+    if (layers.translucent) {
       r.setRenderTarget(this.hdr);
-      drawThree('translucent');
+      r.render(layers.translucent, this.camera);
+    }
+    if (layers.hand) {
+      r.setRenderTarget(this.hdr);
+      r.clearDepth();
+      r.render(layers.hand.scene, layers.hand.camera);
     }
 
     // ---------------------------------------------------------- pós

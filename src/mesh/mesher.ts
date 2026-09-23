@@ -6,7 +6,7 @@
  * - Grafo de visibilidade para o culling de cavernas.
  */
 import {
-  FACE_TEX, FLAGS, F_CULL_SAME, F_LAVA, F_LEAVES, F_WATER, FLUID_LEVEL, LIGHT_OPACITY, OCCLUDES, OPAQUE,
+  FACE_TEX, FLAGS, F_CULL_SAME, F_LAVA, F_LEAVES, F_WATER, F_WATERLOGGED, FLUID_LEVEL, LIGHT_OPACITY, OCCLUDES, OPAQUE,
   RENDER_LAYER, SHAPE, SHAPE_CUBE, SHAPE_FLUID, SHAPE_NONE, TINT, WAVING, BLOCK_OF, LAYER_WATER,
 } from '../world/blocks/registry';
 import { FLAG_FLOWING, FLAG_UNDERWATER, QuadBuffer, packW0, packW1, packW2 } from './vertex';
@@ -15,6 +15,9 @@ import type { ModelContext } from './modelkit';
 import { PAD, pidx, latticeLight } from './padded';
 export { PAD, pidx, latticeLight };
 import { tintColor } from './tints';
+import { S } from '../world/blocks/registry';
+let waterSource = -1;
+const WATER_SOURCE = (): number => (waterSource < 0 ? (waterSource = S('water')) : waterSource);
 
 
 export interface MeshInput {
@@ -136,7 +139,7 @@ export function meshSection(inp: MeshInput): MeshOutput {
           mTex[m] = FACE_TEX[b * 6 + d] + 1;
           mSky[m] = cornerSky[0] | (cornerSky[1] << 6) | (cornerSky[2] << 12) | (cornerSky[3] << 18);
           mBlk[m] = cornerBlk[0] | (cornerBlk[1] << 6) | (cornerBlk[2] << 12) | (cornerBlk[3] << 18);
-          const under = FLAGS[n] & F_WATER ? FLAG_UNDERWATER : 0;
+          const under = FLAGS[n] & (F_WATER | F_WATERLOGGED) ? FLAG_UNDERWATER : 0;
           mMisc[m] = cornerAo[0] | (cornerAo[1] << 2) | (cornerAo[2] << 4) | (cornerAo[3] << 6) | (under << 8) | (WAVING[b] << 12) | (RENDER_LAYER[b] << 14);
           mTint[m] = TINT[b] ? tintColor(TINT[b], b, tints, cx, cz) : 0xffff;
           if (oLight >> 4 > 0) skyLit = true;
@@ -184,7 +187,10 @@ export function meshSection(inp: MeshInput): MeshOutput {
         const sh = SHAPE[b];
         if (sh === SHAPE_NONE || sh === SHAPE_CUBE) continue;
         if (sh === SHAPE_FLUID) meshFluid(ctx, x, y, z, b);
-        else buildModel(ctx, x, y, z, b, sh);
+        else {
+          buildModel(ctx, x, y, z, b, sh);
+          if (FLAGS[b] & F_WATERLOGGED) meshFluid(ctx, x, y, z, WATER_SOURCE());
+        }
         if (!skyLit && (light[pi] >> 4) > 0) skyLit = true;
       }
     }
@@ -247,7 +253,7 @@ function emitGreedy(d: number, s: number, u: number, v: number, w: number, h: nu
 function meshFluid(ctx: ModelContext, x: number, y: number, z: number, b: number): void {
   const { blocks, light, tints } = ctx;
   const water = (FLAGS[b] & F_WATER) !== 0;
-  const mask = water ? F_WATER : F_LAVA;
+  const mask = water ? F_WATER | F_WATERLOGGED : F_LAVA;
   const same = (s: number) => (FLAGS[s] & mask) !== 0;
   const buf = ctx.out[water ? LAYER_WATER : 0];
   const texTop = FACE_TEX[b * 6 + 1] & 0xfff, texSide = FACE_TEX[b * 6 + 2] & 0xfff;
@@ -257,7 +263,7 @@ function meshFluid(ctx: ModelContext, x: number, y: number, z: number, b: number
     const s = blocks[pidx(xx, y, zz)];
     if (same(s)) {
       if (same(blocks[pidx(xx, y + 1, zz)])) return 1;
-      const lv = FLUID_LEVEL[s];
+      const lv = FLAGS[s] & F_WATERLOGGED ? 0 : FLUID_LEVEL[s];
       return lv >= 8 ? 8 / 9 : (8 - lv) / 9;
     }
     return OPAQUE[s] || (FLAGS[s] & 1 && !(FLAGS[s] & 2)) ? -2 : -1;

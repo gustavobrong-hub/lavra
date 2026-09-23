@@ -61,6 +61,7 @@ export class FrameUBO {
     this.data[o] = x; this.data[o + 1] = y; this.data[o + 2] = z; this.data[o + 3] = w;
   }
   get(key: Vec4Key): Float32Array { return this.data.subarray(OFF[key], OFF[key] + 4); }
+  has(key: string): boolean { return key in OFF; }
 
   upload(): void {
     const gl = this.gl;

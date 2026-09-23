@@ -11,7 +11,7 @@ import { UTILITY } from './defs/utility';
 import { INFERO } from './defs/infero';
 import {
   registerBlock, setOccludes, BLOCKS, S, F_FULL_CUBE_COLLISION, FLAGS, LIGHT_OPACITY, OPAQUE, STATE_PROPS,
-  texLayer, freezeTextures,
+  texLayer, freezeTextures, F_WATERLOGGED,
 } from './registry';
 import type { Props } from './types';
 
@@ -45,6 +45,15 @@ export function initBlocks(): void {
     } else if (b.shape === 'snowlayer') {
       setOccludes(b.name, (p: Props) => SIDE_BITS.down | ((p.layers as number) === 8 ? 63 : 0));
       each((s, p) => { if (p.layers === 8) { LIGHT_OPACITY[s] = 15; OPAQUE[s] = 1; FLAGS[s] |= F_FULL_CUBE_COLLISION; } });
+    }
+  }
+  // plantas aquáticas vivem dentro d'água
+  for (const n of ['kelp', 'kelp_plant', 'seagrass', 'tall_seagrass']) {
+    const b = BLOCKS.find((x) => x.name === n)!;
+    for (let i = 0; i < b.stateCount; i++) {
+      const s = b.baseState + i;
+      FLAGS[s] |= F_WATERLOGGED;
+      LIGHT_OPACITY[s] = 1;
     }
   }
   // texturas usadas diretamente pelos modelos

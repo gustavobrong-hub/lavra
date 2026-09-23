@@ -25,3 +25,14 @@ html, body {
 .debug-right span { margin-left: auto; }
 .fatal { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; }
 .fatal h1 { color: var(--accent); font-size: 48px; margin: 0 0 12px; }
+.hud { position: fixed; inset: 0; pointer-events: none; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; transform: translate(-50%, -50%); mix-blend-mode: difference; }
+.crosshair::before, .crosshair::after { content: ''; position: absolute; background: #fff; }
+.crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+.crosshair::after { top: 8px; left: 0; height: 2px; width: 18px; }
+.hotbar { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 2px; padding: 3px; background: rgba(12, 14, 18, 0.62); border: 2px solid rgba(255,255,255,0.14); border-radius: 6px; }
+.hotbar .slot { width: 56px; height: 56px; position: relative; border-radius: 4px; background: rgba(255,255,255,0.05); display: grid; place-items: center; overflow: hidden; }
+.hotbar .slot.sel { outline: 3px solid #f4e7c1; outline-offset: -1px; background: rgba(255,255,255,0.14); }
+.hotbar .slot .lbl { font-size: 9px; line-height: 1.05; text-align: center; color: #ddd; padding: 2px; }
+.hotbar .slot b { position: absolute; right: 4px; bottom: 2px; font-size: 13px; text-shadow: 1px 1px 0 #000; }
+.held-name { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); font-size: 15px; text-shadow: 1px 1px 0 #000; transition: opacity 0.2s; }
