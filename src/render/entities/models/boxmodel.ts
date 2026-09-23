@@ -293,7 +293,7 @@ export function instantiate(def: ModelDef, variant = ''): ModelInstance {
       const k = `${def.id}|${v}`;
       let t = skinCache.get(k);
       if (!t) { t = paintSkin(def, b!, v); skinCache.set(k, t); }
-      for (const m of mats) m.uniforms.uMap.value = t;
+      for (const m of mats) if (m.uniforms.uMap) m.uniforms.uMap.value = t;
     },
   };
 }
