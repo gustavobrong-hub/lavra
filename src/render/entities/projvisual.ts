@@ -9,6 +9,10 @@ import { instantiate, type ModelDef } from './models/boxmodel';
 import type { Arrow, Throwable, Fireball } from '../../game/entity/projectiles';
 import { skinMaterial } from './shared';
 import type { XpOrb } from '../../game/entity/xporb';
+import { blockGeometry } from './blockmesh';
+import { blockMaterial } from './shared';
+import { S } from '../../world/blocks';
+import type { PrimedTnt } from '../../game/fulgorgame';
 
 /** Textura do orbe de experiência: gema facetada 16×16 (branca; a cor vem do tint). */
 let orbTex: THREE.Texture | null = null;
@@ -131,6 +135,25 @@ export function registerProjectileVisuals(r: EntityRenderer): void {
         m.uniforms.uTint.value.setRGB(0.55 + k * 0.45, 1, 0.15 * (1 - k));
         plane.position.set(0, 0.12 + size / 2, 0);
         plane.lookAt(0, 0, 0); // a câmera está na origem da cena relativa
+      },
+    };
+  });
+  // TNT acesa: pisca branco a cada 5 ticks e incha nos últimos 10
+  r.register('tnt', (e: Entity): EntityVisual => {
+    const m = blockMaterial();
+    const mesh = new THREE.Mesh(blockGeometry(S('tnt')), m);
+    const g = new THREE.Group();
+    g.add(mesh);
+    return {
+      obj: g, mats: [m],
+      update(ent: Entity, alpha: number) {
+        const t = ent as PrimedTnt;
+        const f = t.fuse - alpha + 1;
+        let k = 1;
+        if (f < 10) { let q = 1 - f / 10; q = Math.max(0, Math.min(1, q)); q *= q; q *= q; k = 1 + q * 0.3; }
+        mesh.scale.setScalar(k);
+        const flash = Math.floor(t.fuse / 5) % 2 === 0;
+        m.uniforms.uOverlay.value.set(1, 1, 1, flash ? 0.8 : 0);
       },
     };
   });

@@ -2,6 +2,7 @@
  * Construtores de modelo por forma (tudo que não é cubo nem fluido).
  * As geometrias seguem as proporções do original (em 1/16 de bloco), mas as texturas são próprias.
  */
+import { wireSides } from '../world/logic/wireconn';
 import {
   BLOCK_OF, BLOCKS, FACE_TEX, FLAGS, F_LEAVES, OPAQUE, SHAPE, SHAPE_IDS, STATE_PROPS, TINT, WAVING, texLayer,
   OCCLUDES, RENDER_LAYER,
@@ -522,31 +523,14 @@ function rail(ctx: ModelContext, x: number, y: number, z: number, b: number): vo
 }
 
 const isWire = (s: number) => shapeOf(s) === 'dust';
-function wireConnects(ctx: ModelContext, x: number, y: number, z: number, d: number): 0 | 1 | 2 {
-  const nx = x + DX[d], nz = z + DZ[d];
-  const n = nb(ctx, nx, y, nz);
-  if (isWire(n)) return 1;
-  const sh = shapeOf(n);
-  if (sh === 'repeater') {
-    const f = DIR_OF[P(n).facing as string];
-    if (f === d || f === (d ^ 1)) return 1;
-  }
-  if (sh === 'comparator' || sh === 'lever' || sh === 'button' || sh === 'plate' || sh === 'torch' || sh === 'walltorch' || nameOf(n) === 'fulgor_block' || nameOf(n).includes('observer') || nameOf(n) === 'target' || nameOf(n) === 'daylight_detector') {
-    if (nameOf(n).startsWith('fulgor') || sh !== 'torch' || nameOf(n).includes('fulgor')) return 1;
-  }
-  // subida: fio no vizinho de cima e nada opaco acima deste
-  if (!OPAQUE[nb(ctx, x, y + 1, z)] && isWire(nb(ctx, nx, y + 1, nz))) return 2;
-  // descida: vizinho não opaco com fio embaixo
-  if (!OPAQUE[n] && isWire(nb(ctx, nx, y - 1, nz))) return 1;
-  return 0;
-}
-
+void isWire;
 function dust(ctx: ModelContext, x: number, y: number, z: number, b: number): void {
   const dot = T(b, 1), line = T(b, 2);
   const tint = tintOf(ctx, b, x, z);
   const power = (P(b).power as number) ?? 0;
   const flags = power > 0 ? FLAG_EMISSIVE : 0;
-  const c = [2, 3, 4, 5].map((d) => wireConnects(ctx, x, y, z, d)); // N S W E
+  // mesmas regras da lógica (fio isolado = cruz; uma conexão = linha)
+  const c = wireSides((a, bb, cc) => nb(ctx, a, bb, cc), x, y, z); // N S W E
   const n = c[0] > 0, s = c[1] > 0, w = c[2] > 0, e = c[3] > 0;
   const count = +n + +s + +w + +e;
   const yy = 0.25;

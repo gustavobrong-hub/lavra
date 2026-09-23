@@ -177,7 +177,7 @@ export class Arrow extends Projectile {
     this.vx = this.vy = this.vz = 0;
     this.host.emit('sound', { name: 'arrow.land', x: this.x, y: this.y, z: this.z });
     // alvo de fulgor e botões de madeira reagem a flechas (tratado pelo nível)
-    this.host.emit('projectileHitBlock', { x, y, z, kind: 'arrow', px: this.x, py: this.y, pz: this.z });
+    this.host.emit('projectileHitBlock', { x, y, z, kind: 'arrow', px: this.x, py: this.y, pz: this.z, burning: this.flame || this.fireTicks > 0 });
   }
 }
 
@@ -204,7 +204,9 @@ export class Throwable extends Projectile {
     if (this.item.id === 'snowball') e.hurt({ type: 'generic', attacker: this.owner ?? undefined, from: [this.x, this.y, this.z] }, e.type === 'fagulha' ? 3 : 0);
     else if (this.item.id === 'egg') e.hurt({ type: 'generic', attacker: this.owner ?? undefined, from: [this.x, this.y, this.z] }, 0);
   }
-  protected onHitBlock(): void { /* impacto trata tudo */ }
+  protected onHitBlock(x: number, y: number, z: number): void {
+    this.host.emit('projectileHitBlock', { x, y, z, kind: this.item.id, px: this.x, py: this.y, pz: this.z });
+  }
   private impact(): void {
     const L = this.host;
     const id = this.item.id;

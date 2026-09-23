@@ -106,8 +106,26 @@ export class Level implements FallingHost {
     this.scheduler.schedule(this.gameTime, x, y, z, BLOCK_OF[state], delay, priority);
   }
 
+  /** ganchos chamados em toda mudança real de estado (observadores do fulgor) */
+  readonly stateHooks: ((x: number, y: number, z: number, old: number, now: number) => void)[] = [];
+
+  /** Várias mudanças como uma só (portas, camas): os vizinhos só reagem no fim. */
+  batch(fn: () => void): void {
+    const was = this.processing;
+    this.processing = true;
+    try { fn(); } finally { this.processing = was; }
+    if (!was) this.processUpdates();
+  }
+
+  /** Enfileira uma atualização de vizinho (sem mudança de estado). */
+  notify(x: number, y: number, z: number, fx: number, fy: number, fz: number): void {
+    this.updates.push(x, y, z, fx, fy, fz);
+    if (!this.processing) this.processUpdates();
+  }
+
   private onChanged(x: number, y: number, z: number, old: number, now: number): void {
     if (BLOCK_OF[old] !== BLOCK_OF[now] || old !== now) this.pois.onBlock(x, y, z, now);
+    for (const h of this.stateHooks) h(x, y, z, old, now);
     const bo = this.behaviors.get(BLOCK_OF[old]);
     if (bo?.removed && BLOCK_OF[old] !== BLOCK_OF[now]) bo.removed(this, x, y, z, old, now);
     const bn = this.behaviors.get(BLOCK_OF[now]);

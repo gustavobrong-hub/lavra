@@ -51,6 +51,7 @@ import type { Horse } from './entity/species/tamables';
 import { throwItem, releaseBow, useSpawnEgg, holdDuration, hasArrows, THROWABLES, useBucket, useHoe, useBoneMeal } from './player/useitems';
 import { installFluids } from '../world/logic/fluids';
 import { installGrowth, randomTicks, harvestBerries } from '../world/logic/growth';
+import { installFulgorGame, primeTnt } from './fulgorgame';
 import type { BlockHit } from './raycast';
 import { Arrow } from './entity/projectiles';
 import { MerchantMenu } from './inventory/merchantmenu';
@@ -102,6 +103,7 @@ export class Game {
   private jumpCharge = 0;
   /** esconde a mão em primeira pessoa (galeria, capturas) */
   hideHand = false;
+  private fulgor!: { tick(): void };
   yaw = 0; // graus (convenção do original)
   pitch = 0;
   thirdPerson: 0 | 1 | 2 = 0;
@@ -157,6 +159,7 @@ export class Game {
     installGolemBuilding(this.level);
     installFluids(this.level);
     installGrowth(this.level);
+    this.fulgor = installFulgorGame(this.level);
     const icons = buildIconAtlas(this.pipeline.textureData);
     installIcons(icons);
     const sprite = itemSpriteFactory(icons);
@@ -402,6 +405,7 @@ export class Game {
     this.level.updateSky();
     this.level.tickBlocks();
     randomTicks(this.level, Math.floor(p.x) >> 4, Math.floor(p.z) >> 4, 8, this.level.rules.randomTickSpeed);
+    this.fulgor.tick();
     this.spawner.tick();
     this.level.entities.tick((e) => e !== p);
     this.pickupItems();
@@ -615,6 +619,19 @@ export class Game {
     const p = this.player;
     if (name.endsWith('_bed')) return this.useBed(x, y, z, st);
     if (name === 'sweet_berry_bush') return harvestBerries(this.level, x, y, z, st);
+    if (name === 'tnt' && (p.inventory.held?.id === 'flint_and_steel' || p.inventory.held?.id === 'fire_charge')) {
+      this.level.setBlock(x, y, z, 0);
+      primeTnt(this.level, x, y, z, 80, p);
+      if (p.gameMode !== 'creative') p.inventory.damageHeld(1);
+      return true;
+    }
+    if (name === 'dispenser' || name === 'dropper') {
+      let be = getBE<ContainerBE>(this.level, x, y, z);
+      if (!be) { be = { type: 'chest', items: new Array(9).fill(null) }; setBE(this.level, x, y, z, be); }
+      const menu = new ChestMenu(p.inventory, be.items, 1, () => { const c = this.world.getChunk(x >> 4, z >> 4); if (c) c.dirty = true; });
+      this.openScreen(new ChestScreen(menu, name === 'dispenser' ? 'Ejetor' : 'Liberador'));
+      return true;
+    }
     if (name === 'crafting_table') { this.openScreen(new CraftingScreen(new CraftingGridMenu(p.inventory, 3))); return true; }
     if (name === 'furnace' || name === 'smoker' || name === 'blast_furnace') {
       const be = getBE<FurnaceBE>(this.level, x, y, z);

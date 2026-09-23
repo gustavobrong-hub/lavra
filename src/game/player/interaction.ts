@@ -213,7 +213,7 @@ export class Interaction {
         if (hit.length || (p.bb.intersects(box) && !p.noPhysics)) return false;
       }
     }
-    for (const [bx, by, bz, st] of pl.states) this.level.setBlock(bx, by, bz, st);
+    this.level.batch(() => { for (const [bx, by, bz, st] of pl.states) this.level.setBlock(bx, by, bz, st); });
     this.level.emit('blockPlace', { x, y, z, state: pl.states[0][3], by: p });
     return true;
   }

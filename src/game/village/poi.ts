@@ -13,10 +13,10 @@ export const JOB_SITES: Record<string, string> = {
   smoker: 'acougueiro', cauldron: 'curtidor', lectern: 'bibliotecario', stonecutter: 'pedreiro',
 };
 
-export type PoiType = 'bed' | 'bell' | 'job';
+export type PoiType = 'bed' | 'bell' | 'job' | 'sensor';
 export interface Poi { type: PoiType; x: number; y: number; z: number; job?: string; claimedBy: number }
 
-let KIND: Uint8Array | null = null; // 0 nada, 1 cama, 2 sino, 3 trabalho
+let KIND: Uint8Array | null = null; // 0 nada, 1 cama, 2 sino, 3 trabalho, 4 sensor de luz
 function kindTable(): Uint8Array {
   if (KIND) return KIND;
   KIND = new Uint8Array(BLOCKS.length);
@@ -24,6 +24,7 @@ function kindTable(): Uint8Array {
     if (b.name.endsWith('_bed')) KIND[b.id] = 1;
     else if (b.name === 'bell') KIND[b.id] = 2;
     else if (JOB_SITES[b.name]) KIND[b.id] = 3;
+    else if (b.name === 'daylight_detector') KIND[b.id] = 4;
   }
   return KIND;
 }
@@ -57,6 +58,7 @@ export class PoiManager {
     const name = BLOCKS[BLOCK_OF[state]].name;
     if (t === 1) { if (STATE_PROPS[state].part === 'head') this.add('bed', x, y, z); }
     else if (t === 2) this.add('bell', x, y, z);
+    else if (t === 4) this.add('sensor', x, y, z);
     else this.add('job', x, y, z, JOB_SITES[name]);
   }
 
