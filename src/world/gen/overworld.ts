@@ -19,7 +19,7 @@ import { decorateVegetation, type ColumnInfo } from './features/vegetation';
 import { carveChunk } from './carvers';
 import { placeStructures, type StructureHooks } from './structures';
 
-export interface SpawnHint { type: string; x: number; y: number; z: number; count: number }
+export interface SpawnHint { type: string; x: number; y: number; z: number; count: number; data?: Record<string, unknown> }
 
 let ST: Record<string, number> | null = null;
 function st(): Record<string, number> {
@@ -325,6 +325,7 @@ export class OverworldGenerator {
       let pick = kindRoll * total;
       let kind = b.trees[0][0];
       for (const [k, wgt] of b.trees) { pick -= wgt; if (pick <= 0) { kind = k; break; } }
+      if (this.hooks?.planners.some((pl) => pl.blocksTrees?.(this, x, z))) continue;
       growTree(kind, w, Random.fromHash(this.seed, x, z, 0x77), x, y + 1, z);
       // terra por baixo do tronco (se o topo era grama)
       if (w.inside(x, y, z)) {

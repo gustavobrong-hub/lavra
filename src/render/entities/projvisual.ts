@@ -7,6 +7,29 @@ import type { Entity } from '../../game/entity/entity';
 import type { EntityRenderer, EntityVisual } from './entityrenderer';
 import { instantiate, type ModelDef } from './models/boxmodel';
 import type { Arrow, Throwable, Fireball } from '../../game/entity/projectiles';
+import { skinMaterial } from './shared';
+import type { XpOrb } from '../../game/entity/xporb';
+
+/** Textura do orbe de experiência: gema facetada 16×16 (branca; a cor vem do tint). */
+let orbTex: THREE.Texture | null = null;
+function orbTexture(): THREE.Texture {
+  if (orbTex) return orbTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 16;
+  const g = c.getContext('2d')!;
+  const rows = [
+    '................', '................', '......3333......', '....33222233....', '...3221111223...', '...3211001123...',
+    '..321100001123..', '..321000000123..', '..321000000123..', '..321100001123..', '...3211001123...', '...3221111223...',
+    '....33222233....', '......3333......', '................', '................',
+  ];
+  const col = ['#ffffff', '#f2f2f2', '#c9c9c9', '#8a8a8a'];
+  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (ch !== '.') { g.fillStyle = col[+ch]; g.fillRect(x, y, 1, 1); } }));
+  orbTex = new THREE.CanvasTexture(c);
+  orbTex.magFilter = orbTex.minFilter = THREE.NearestFilter;
+  orbTex.generateMipmaps = false;
+  orbTex.colorSpace = THREE.SRGBColorSpace;
+  return orbTex;
+}
 
 const ARROW: ModelDef = {
   id: 'proj_arrow',
@@ -89,6 +112,25 @@ export function registerProjectileVisuals(r: EntityRenderer): void {
         const t = ent.age + alpha;
         inst.body.rotation.set(t * 0.2, t * 0.31, t * 0.13);
         inst.body.position.set(0, ent.height / 2 - (f.big ? 7 : 2.5) / 16, 0);
+      },
+    };
+  });
+  r.register('xp_orb', (e: Entity): EntityVisual => {
+    const o = e as XpOrb;
+    const m = skinMaterial(orbTexture());
+    m.uniforms.uEmissive.value = 1;
+    const size = o.value >= 37 ? 0.5 : o.value >= 7 ? 0.38 : o.value >= 3 ? 0.3 : 0.22;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), m);
+    const g = new THREE.Group();
+    g.add(plane);
+    return {
+      obj: g, mats: [m],
+      update(ent: Entity, alpha: number) {
+        const t = (ent.age + alpha) / 2;
+        const k = (Math.sin(t) + 1) * 0.5;
+        m.uniforms.uTint.value.setRGB(0.55 + k * 0.45, 1, 0.15 * (1 - k));
+        plane.position.set(0, 0.12 + size / 2, 0);
+        plane.lookAt(0, 0, 0); // a câmera está na origem da cena relativa
       },
     };
   });

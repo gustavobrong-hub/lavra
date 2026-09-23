@@ -15,6 +15,8 @@ export interface StructurePlanner {
   name: string;
   /** peças de todas as estruturas cujo início está perto do chunk (cx, cz) */
   piecesNear(gen: OverworldGenerator, cx: number, cz: number): StructurePiece[];
+  /** impede árvores dentro da estrutura (vilas) */
+  blocksTrees?(gen: OverworldGenerator, x: number, z: number): boolean;
 }
 
 export interface StructureHooks {

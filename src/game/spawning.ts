@@ -11,6 +11,7 @@ import { BIOMES } from '../world/gen/biomes';
 import { BLOCKS, BLOCK_OF, FLAGS, F_SOLID, F_FLUID, F_WATER, F_WATERLOGGED, F_FULL_CUBE_COLLISION, OPAQUE, F_LEAVES } from '../world/blocks';
 import { MIN_Y } from '../core/constants';
 import type { SpawnHint } from '../world/gen/overworld';
+import type { Villager } from './village/villager';
 
 interface Entry { type: string; weight: number; min: number; max: number }
 type Table = Partial<Record<MobCategory, Entry[]>>;
@@ -224,6 +225,24 @@ export class NaturalSpawner {
   onGenerated(spawns: SpawnHint[]): void {
     const L = this.level;
     for (const h of spawns) {
+      // criaturas de estruturas (vilas): posição exata, sem regras de spawn
+      if (h.type === 'villager' || h.type === 'sentinela' || h.type === 'cat' || h.data?.pen) {
+        for (let i = 0; i < h.count; i++) {
+          const ox = h.count > 1 ? (Math.random() - 0.5) * 2 : 0, oz = h.count > 1 ? (Math.random() - 0.5) * 2 : 0;
+          const m = spawnMob(L, h.type, h.x + ox, h.y, h.z + oz, { reason: 'chunk' });
+          if (!m) continue;
+          m.persistent = true;
+          if (h.type === 'villager') {
+            const v = m as Villager;
+            const d = h.data ?? {};
+            if (d.profession && d.profession !== 'nenhuma') v.profession = d.profession as Villager['profession'];
+            if (d.style) v.style = d.style as Villager['style'];
+            const bed = d.bed as [number, number, number] | undefined;
+            if (bed) v.claimAt('bed', bed[0], bed[1], bed[2]);
+          }
+        }
+        continue;
+      }
       for (let i = 0; i < h.count; i++) {
         const x = Math.floor(h.x + (Math.random() - 0.5) * 6), z = Math.floor(h.z + (Math.random() - 0.5) * 6);
         let y = Math.floor(h.y) + 3;

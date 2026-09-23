@@ -27,7 +27,7 @@ import { UIManager } from '../ui/ui';
 import { buildIconAtlas, installIcons } from '../render/icons';
 import { itemSpriteFactory } from '../render/items/extrude';
 import { initRecipes } from './crafting/data';
-import { installBlockEntities, getBE, type ContainerBE, type FurnaceBE } from './blockentity/blockentities';
+import { installBlockEntities, getBE, setBE, type ContainerBE, type FurnaceBE } from './blockentity/blockentities';
 import { CraftingGridMenu, ChestMenu } from './inventory/menu';
 import { FurnaceMenu } from './inventory/furnacemenu';
 import { InventoryScreen, CraftingScreen, FurnaceScreen, ChestScreen } from '../ui/screens/screens';
@@ -51,6 +51,17 @@ import type { Horse } from './entity/species/tamables';
 import { throwItem, releaseBow, useSpawnEgg, holdDuration, hasArrows, THROWABLES } from './player/useitems';
 import type { BlockHit } from './raycast';
 import { Arrow } from './entity/projectiles';
+import { MerchantMenu } from './inventory/merchantmenu';
+import { MerchantScreen } from '../ui/screens/merchant';
+import type { Villager } from './village/villager';
+import { installGolemBuilding } from './village/golem';
+import { rollChest } from './loot/chestloot';
+
+/** Baú gerado com tabela de saque: sorteia os itens na primeira abertura. */
+function fillLoot(be: ContainerBE & { loot?: string }): void {
+  if (be.loot) { be.items = rollChest(be.loot); delete be.loot; }
+  if (!be.items) be.items = new Array(27).fill(null);
+}
 
 export interface GameOptions {
   seed: number;
@@ -118,6 +129,8 @@ export class Game {
     this.pool = new WorkerPool(Math.max(2, Math.min(6, cores - 1)));
     this.pipeline = new Pipeline(canvas, settings.graphics);
     this.streamer = new WorldStreamer(this.world, this.pool, this.pipeline.chunks, {
+      onLoaded: (c) => this.level?.pois.scanChunk(c),
+      onUnloaded: (c) => this.level?.pois.unloadChunk(c.cx, c.cz),
       onGenerated: (_c, spawns) => this.spawner?.onGenerated(spawns),
     });
     this.streamer.renderDistance = settings.graphics.renderDistance;
@@ -138,6 +151,7 @@ export class Game {
     this.transScene.add(this.overlay.group);
     initRecipes();
     installBlockEntities(this.level);
+    installGolemBuilding(this.level);
     const icons = buildIconAtlas(this.pipeline.textureData);
     installIcons(icons);
     const sprite = itemSpriteFactory(icons);
@@ -155,8 +169,19 @@ export class Game {
     this.debug = new DebugOverlay(uiRoot, { lines: () => this.debugLines(), right: () => this.debugRight() });
     this.level.on((e) => {
       if (e.type === 'xp') spawnXp(this.level, e.x as number, e.y as number, e.z as number, e.amount as number);
-      else if (e.type === 'spawnMob') spawnMob(this.level, e.mob as string, e.x as number, e.y as number, e.z as number, { baby: !!e.baby, size: e.size as number | undefined, yaw: e.yaw as number | undefined, reason: 'breed' });
-      else if (e.type === 'convertMob') {
+      else if (e.type === 'spawnMob') {
+        const m = spawnMob(this.level, e.mob as string, e.x as number, e.y as number, e.z as number, { baby: !!e.baby, size: e.size as number | undefined, yaw: e.yaw as number | undefined, reason: 'breed' });
+        if (m && e.style) (m as unknown as { style: string }).style = e.style as string;
+      }
+      else if (e.type === 'openTrade') {
+        const v = this.level.entities.byId.get(e.id as number) as Villager | undefined;
+        if (v) {
+          const menu = new MerchantMenu(this.player.inventory, v);
+          const scr = new MerchantScreen(menu, v);
+          scr.onClosed = () => { v.tradingPlayer = null; };
+          this.openScreen(scr);
+        }
+      } else if (e.type === 'convertMob') {
         const old = this.level.entities.byId.get(e.id as number) as Mob | undefined;
         const m = createMob(this.level, e.to as string, e.x as number, e.y as number, e.z as number, { yaw: e.yaw as number, baby: !!e.baby, reason: 'convert' });
         if (m) { if (old) { m.mainHand = old.mainHand; m.helmet = old.helmet; m.customName = old.customName; m.persistent = old.persistent; } this.level.entities.add(m); }
@@ -590,8 +615,13 @@ export class Game {
       return true;
     }
     if (name === 'chest' || name === 'trapped_chest' || name === 'barrel') {
-      const be = getBE<ContainerBE>(this.level, x, y, z);
-      if (!be) return false;
+      let be = getBE<ContainerBE>(this.level, x, y, z);
+      if (!be) {
+        // baú/barril gerado sem dados: cria vazio
+        be = { type: name === 'barrel' ? 'barrel' : 'chest', items: new Array(27).fill(null) };
+        setBE(this.level, x, y, z, be);
+      }
+      fillLoot(be);
       let items = be.items, rows = 3, title = name === 'barrel' ? 'Barril' : 'Baú';
       const props = STATE_PROPS[st];
       if (props.type && props.type !== 'single') {
@@ -601,6 +631,7 @@ export class Game {
         const k = props.type === 'left' ? 1 : -1;
         const ox = x + right[0] * k, oz = z + right[1] * k;
         const other = getBE<ContainerBE>(this.level, ox, y, oz);
+        if (other) fillLoot(other);
         if (other) {
           const leftItems = props.type === 'left' ? be.items : other.items;
           const rightItems = props.type === 'left' ? other.items : be.items;

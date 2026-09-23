@@ -17,6 +17,7 @@ import type { Difficulty } from './player/food';
 import type { Player } from './player/player';
 import { skyDarkenFor } from '../render/skymodel';
 import { BIOMES } from '../world/gen/biomes';
+import { PoiManager } from './village/poi';
 
 export interface LevelEvent { type: string; [k: string]: unknown }
 export type BlockBehavior = {
@@ -50,6 +51,8 @@ export class Level implements FallingHost {
   readonly entities = new EntityManager();
   readonly scheduler = new TickScheduler();
   readonly players: Player[] = [];
+  /** pontos de interesse (camas, sinos, blocos de trabalho) */
+  readonly pois = new PoiManager();
   gameTime = 0;
   /** hora do dia em ticks (0 = amanhecer, 6000 = meio-dia) */
   dayTime = 0;
@@ -104,6 +107,7 @@ export class Level implements FallingHost {
   }
 
   private onChanged(x: number, y: number, z: number, old: number, now: number): void {
+    if (BLOCK_OF[old] !== BLOCK_OF[now] || old !== now) this.pois.onBlock(x, y, z, now);
     const bo = this.behaviors.get(BLOCK_OF[old]);
     if (bo?.removed && BLOCK_OF[old] !== BLOCK_OF[now]) bo.removed(this, x, y, z, old, now);
     const bn = this.behaviors.get(BLOCK_OF[now]);

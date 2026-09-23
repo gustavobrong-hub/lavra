@@ -4,66 +4,66 @@ Legenda: `[x]` pronto e testado · `[~]` parcial · `[ ]` pendente.
 Cada marco só fecha com: testes passando, zero erros no console, screenshots do Playwright conferidas e commit.
 
 ## M0 — Base do projeto
-- [ ] Vite + TypeScript + Three.js, Vitest, Playwright
-- [ ] DESIGN.md e PROGRESSO.md
-- [ ] Harness de teste `window.__lavra`
+- [x] Vite + TypeScript + Three.js, Vitest, Playwright
+- [x] DESIGN.md e PROGRESSO.md
+- [x] Harness de teste `window.__lavra`
 
 ## M1 — Motor de voxels e renderização base
-- [ ] Constantes, matemática, PRNG com seed, ruído Perlin/Simplex com oitavas
-- [ ] Registro de blocos com estados e tabelas tipadas
-- [ ] Seções/chunks/mundo (get/set, heightmap)
-- [ ] Pool de workers (geração + malha) com prioridade
-- [ ] Mesher: greedy meshing, descarte de faces ocultas, AO e luz suave por vértice, modelos e fluidos
-- [ ] Texturas pixel art procedurais em texture array (com mipmaps preservando cobertura)
-- [ ] Renderizador de chunks WebGL2 (VAO por seção, UBO, culling por frustum)
-- [ ] Culling de cavernas (grafo de visibilidade por seção)
-- [ ] Distância de renderização configurável, carregamento em espiral sem travadas
-- [ ] Tela de debug (FPS, coordenadas, bioma, chunk)
+- [x] Constantes, matemática, PRNG com seed, ruído Perlin/Simplex com oitavas
+- [x] Registro de blocos com estados e tabelas tipadas
+- [x] Seções/chunks/mundo (get/set, heightmap)
+- [x] Pool de workers (geração + malha) com prioridade
+- [x] Mesher: greedy meshing, descarte de faces ocultas, AO e luz suave por vértice, modelos e fluidos
+- [x] Texturas pixel art procedurais em texture array (com mipmaps preservando cobertura)
+- [x] Renderizador de chunks WebGL2 (VAO por seção, UBO, culling por frustum)
+- [x] Culling de cavernas (grafo de visibilidade por seção)
+- [x] Distância de renderização configurável, carregamento em espiral sem travadas
+- [x] Tela de debug (FPS, coordenadas, bioma, chunk)
 
 ## M2 — Mundo e biomas
-- [ ] Clima multi-ruído e seleção de biomas com transição suave
-- [ ] Biomas: planície, floresta, deserto, neve, montanhas, oceano, pântano, selva, savana, taiga, praia, rio, Bosque Lume (raro)
-- [ ] Terreno 3D (saliências, penhascos, picos), rios, lagos
-- [ ] Cavernas queijo/espaguete/talharim, túneis, ravinas, aquíferos, lava profunda
-- [ ] Minérios por profundidade (carvão, ferro, cobre, ouro, fulgor, lápis, diamante, esmeralda), deepslate, camada indestrutível
-- [ ] Árvores (carvalho, bétula, pinheiro, selva, acácia, carvalho escuro, pântano, lume) e vegetação (grama, flores, cactos, cogumelos, cana, abóboras, melancias, frutinhas, algas)
+- [x] Clima multi-ruído e seleção de biomas com transição suave
+- [x] Biomas: planície, floresta, deserto, neve, montanhas, oceano, pântano, selva, savana, taiga, praia, rio, Bosque Lume (raro)
+- [x] Terreno 3D (saliências, penhascos, picos), rios, lagos
+- [x] Cavernas queijo/espaguete/talharim, túneis, ravinas, aquíferos, lava profunda
+- [x] Minérios por profundidade (carvão, ferro, cobre, ouro, fulgor, lápis, diamante, esmeralda), deepslate, camada indestrutível
+- [x] Árvores (carvalho, bétula, pinheiro, selva, acácia, carvalho escuro, pântano, lume) e vegetação (grama, flores, cactos, cogumelos, cana, abóboras, melancias, frutinhas, algas)
 
 ## M3 — Jogador e física
-- [ ] Colisão AABB, gravidade, pulo, corrida, agachar sem cair de beiradas, degrau, nado, escadas de mão
-- [ ] Números do original (0,42 de pulo, 0,08 de gravidade, atrito 0,546, 4,317 m/s andando…)
-- [ ] Raycast, quebrar (tempo por bloco/ferramenta) e colocar blocos, contorno e rachaduras
-- [ ] Blocos com gravidade (areia, cascalho)
-- [ ] Primeira e terceira pessoa, mão/item na tela
-- [ ] Voo no Criativo
+- [x] Colisão AABB, gravidade, pulo, corrida, agachar sem cair de beiradas, degrau, nado, escadas de mão
+- [x] Números do original (0,42 de pulo, 0,08 de gravidade, atrito 0,546, 4,317 m/s andando…)
+- [x] Raycast, quebrar (tempo por bloco/ferramenta) e colocar blocos, contorno e rachaduras
+- [x] Blocos com gravidade (areia, cascalho)
+- [~] Primeira e terceira pessoa, mão/item na tela (falta o modelo do jogador para a 3ª pessoa)
+- [x] Voo no Criativo
 
 ## M4 — Iluminação
-- [ ] Luz do céu e de blocos com propagação entre chunks
-- [ ] Atualização incremental ao quebrar/colocar
-- [ ] Luz suave + AO, ciclo dia/noite (20 min)
+- [x] Luz do céu e de blocos com propagação entre chunks
+- [x] Atualização incremental ao quebrar/colocar
+- [x] Luz suave + AO, ciclo dia/noite (20 min)
 
 ## M5 — Inventário e crafting
-- [ ] Registro de itens, ícones (atlas), hotbar, inventário com arrastar/soltar, empilhar, dividir, shift-clique, distribuir arrastando
-- [ ] Crafting 2×2 e 3×3 (com e sem formato), livro de receitas navegável
-- [ ] Fornalha com combustível, baús
-- [ ] Ferramentas (madeira, pedra, ferro, ouro, diamante) com durabilidade, espadas, machados
-- [ ] Arco e flecha, escudo, armaduras
+- [x] Registro de itens, ícones (atlas), hotbar, inventário com arrastar/soltar, empilhar, dividir, shift-clique, distribuir arrastando
+- [x] Crafting 2×2 e 3×3 (com e sem formato), livro de receitas navegável
+- [x] Fornalha com combustível, baús
+- [x] Ferramentas (madeira, pedra, ferro, ouro, diamante) com durabilidade, espadas, machados
+- [x] Arco e flecha, escudo, armaduras
 
 ## M6 — Sobrevivência
-- [ ] Vida, fome, saciedade, exaustão, regeneração, comida
-- [ ] Dano de queda, afogamento, fogo, lava, sufocamento, vazio
-- [ ] Morte, tela de morte, respawn
-- [ ] Modos Sobrevivência e Criativo
-- [ ] XP e níveis, orbes
-- [ ] Cama (pular a noite, ponto de respawn)
+- [x] Vida, fome, saciedade, exaustão, regeneração, comida
+- [x] Dano de queda, afogamento, fogo, lava, sufocamento, vazio
+- [x] Morte, tela de morte, respawn
+- [x] Modos Sobrevivência e Criativo
+- [x] XP e níveis, orbes
+- [x] Cama (pular a noite, ponto de respawn)
 
 ## M7 — Animais e inimigos
-- [ ] Sistema de entidades, modelos por caixas com skins procedurais, animação
-- [ ] A* na grade de voxels, IA por objetivos (vagar, fugir, perseguir, atacar)
-- [ ] Spawn por luz/bioma, limites de população, despawn
-- [ ] Animais: vaca, porco, ovelha, galinha, cavalo, lobo, gato, coelho, peixes, Musgarto (+ filhotes, reprodução, drops)
-- [ ] Mecânicas: tosquiar, ordenhar, ovos, domesticar lobo e gato, selar e montar cavalo
-- [ ] Inimigos: Carniçal, Ossudo, Tecelã, Pavio, Feiticeira, Gosma, Assombro, Náufrago, Vulto, Espreitador
-- [ ] Combate: cooldown, crítico, knockback, armadura
+- [~] Sistema de entidades, modelos por caixas com skins procedurais, animação
+- [x] A* na grade de voxels, IA por objetivos (vagar, fugir, perseguir, atacar)
+- [x] Spawn por luz/bioma, limites de população, despawn
+- [~] Animais: vaca, porco, ovelha, galinha, cavalo, lobo, gato, coelho, peixes, Musgarto (+ filhotes, reprodução, drops) — lógica pronta; modelos em produção
+- [x] Mecânicas: tosquiar, ordenhar, ovos, domesticar lobo e gato, selar e montar cavalo
+- [~] Inimigos: Carniçal, Ossudo, Tecelã, Pavio, Feiticeira, Gosma, Assombro, Náufrago, Vulto, Espreitador (+ Fagulha e Brasal do Ínfero) — lógica pronta; modelos em produção
+- [x] Combate: cooldown, crítico, knockback, armadura
 
 ## M8 — Vilas e aldeões
 - [ ] Vilas por bioma (casas de vários tamanhos, caminhos, fazendas, poço, oficinas, praça, postes de luz)
@@ -130,3 +130,6 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 
 ## Diário
 - 2026-09-23 — Projeto criado; DESIGN.md e PROGRESSO.md escritos.
+- 2026-09-23 — M1–M4 (commit 51f3130): motor de voxels, geração com 37 biomas, luz, mesher em workers, renderizador WebGL2. 60 FPS no Apple M4 (Playwright).
+- 2026-09-23 — M3/M5 (commit 3a4aa2a): física fiel do jogador, quebrar/colocar, itens, crafting e menus.
+- 2026-09-23 — M5/M6/M7 parcial (commit a5ae9a8): 408 texturas de bloco e 273 sprites de itens pintados em código; HUD, telas de inventário, fornalha e baús; sobrevivência completa; IA de criaturas (objetivos + A*), 27 espécies com lógica, spawn natural, combate, arco, escudo, arremessáveis, explosões. 60 testes unitários + e2e de luta/ordenha/tosquia/arco/montaria passando. Modelos 3D das criaturas sendo feitos em paralelo (3 grupos) com a galeria `scripts/mobgallery.mjs`.

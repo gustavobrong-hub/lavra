@@ -65,11 +65,13 @@ export class Input {
 
   requestLock(): void {
     if (this.locked) return;
+    // o navegador pode recusar (sem gesto do usuário, janela sem foco): tenta sem "unadjustedMovement" e ignora a recusa
+    const quiet = (r: unknown) => { const q = r as Promise<void> | undefined; if (q && typeof q.catch === 'function') q.catch(() => { /* recusado */ }); };
     try {
       const p = this.canvas.requestPointerLock({ unadjustedMovement: true } as never) as unknown as Promise<void> | undefined;
-      if (p && typeof p.catch === 'function') p.catch(() => this.canvas.requestPointerLock());
+      if (p && typeof p.catch === 'function') p.catch(() => { try { quiet(this.canvas.requestPointerLock()); } catch { /* recusado */ } });
     } catch {
-      this.canvas.requestPointerLock();
+      try { quiet(this.canvas.requestPointerLock()); } catch { /* recusado */ }
     }
   }
 
