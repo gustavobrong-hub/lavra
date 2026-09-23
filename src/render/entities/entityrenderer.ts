@@ -115,4 +115,10 @@ export class EntityRenderer {
   }
 
   get count(): number { return this.visuals.size; }
+
+  /** Descarta todos os visuais (recriados no próximo quadro — ex.: modelos novos carregados). */
+  reset(): void {
+    for (const v of this.visuals.values()) { this.group.remove(v.obj); v.dispose?.(); }
+    this.visuals.clear();
+  }
 }

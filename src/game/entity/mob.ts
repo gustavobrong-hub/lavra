@@ -11,6 +11,7 @@ import { MoveControl, LookControl, JumpControl, PathNavigation, rotlerp, wrapDeg
 import { BLOCKS, BLOCK_OF, FLAGS, F_SOLID, F_FULL_CUBE_COLLISION, OPAQUE, STATE_PROPS } from '../../world/blocks';
 import { ItemStack } from '../items/stack';
 import type { Player } from '../player/player';
+import { trample } from '../../world/logic/growth';
 
 export type MobCategory = 'monster' | 'creature' | 'ambient' | 'water_creature' | 'water_ambient' | 'misc';
 
@@ -395,6 +396,7 @@ export abstract class Mob extends Living {
   }
 
   protected override onLand(fall: number): void {
+    if (fall > 0.5 && this.host.rules.mobGriefing) trample(this.host, Math.floor(this.x), Math.floor(this.y - 0.2), Math.floor(this.z), fall, this.width * this.width * this.height > 0.512);
     if (this.fallMult <= 0 || this.inWater) return;
     const dmg = Math.ceil((fall - 3 - this.effectLevel('jump_boost')) * this.fallMult);
     if (dmg > 0) this.hurt({ type: 'fall' }, dmg);

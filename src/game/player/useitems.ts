@@ -109,3 +109,82 @@ export function holdDuration(id: string): number {
   if (id === 'bow' || id === 'shield' || id === 'harpoon') return 72000;
   return 0;
 }
+
+// ------------------------------------------------------------------ baldes, enxada, farinha de osso
+import { raycastBlocks } from '../raycast';
+import { S, BLOCKS, BLOCK_OF, FLUID_LEVEL, F_LAVA, F_REPLACEABLE, F_FLUID } from '../../world/blocks';
+import { boneMeal } from '../../world/logic/growth';
+import { DIM_INFERO } from '../../core/constants';
+
+const bname = (s: number) => BLOCKS[BLOCK_OF[s]].name;
+
+/** Balde vazio: pega fonte de água ou lava; balde cheio: despeja uma fonte. */
+export function useBucket(level: Level, p: Player, st: ItemStack): boolean {
+  const [dx, dy, dz] = p.lookVec();
+  const reach = p.gameMode === 'creative' ? 5 : 4.5;
+  const ex = p.x, ey = p.y + p.eyeHeight(), ez = p.z;
+  if (st.id === 'bucket') {
+    const hit = raycastBlocks(level.world, ex, ey, ez, dx, dy, dz, reach, { fluids: 'source' });
+    if (!hit) return false;
+    const s = level.getBlock(hit.x, hit.y, hit.z);
+    if (!(FLAGS[s] & F_FLUID) || FLUID_LEVEL[s] !== 0) return false;
+    const filled = FLAGS[s] & F_LAVA ? 'lava_bucket' : 'water_bucket';
+    level.setBlock(hit.x, hit.y, hit.z, 0);
+    level.emit('sound', { name: `bucket.fill.${filled === 'lava_bucket' ? 'lava' : 'water'}`, x: hit.x, y: hit.y, z: hit.z });
+    giveBack(p, st, filled);
+    return true;
+  }
+  if (st.id === 'water_bucket' || st.id === 'lava_bucket') {
+    const hit = raycastBlocks(level.world, ex, ey, ez, dx, dy, dz, reach, { fluids: 'none' });
+    if (!hit) return false;
+    let x = hit.x, y = hit.y, z = hit.z;
+    const clicked = level.getBlock(x, y, z);
+    if (!(FLAGS[clicked] & F_REPLACEABLE)) { x += FACE_DX[hit.face]; y += FACE_DY[hit.face]; z += FACE_DZ[hit.face]; }
+    const cur = level.getBlock(x, y, z);
+    if (cur !== 0 && !(FLAGS[cur] & (F_REPLACEABLE | F_FLUID))) return false;
+    if (st.id === 'water_bucket' && level.world.dim === DIM_INFERO) {
+      level.emit('fizz', { x, y, z });
+    } else {
+      if (cur !== 0 && !(FLAGS[cur] & F_FLUID)) level.breakBlock(x, y, z, { drop: true, silent: true });
+      level.setBlock(x, y, z, S(st.id === 'water_bucket' ? 'water' : 'lava'));
+      level.emit('sound', { name: `bucket.empty.${st.id === 'lava_bucket' ? 'lava' : 'water'}`, x, y, z });
+    }
+    giveBack(p, st, 'bucket');
+    return true;
+  }
+  return false;
+}
+
+function giveBack(p: Player, st: ItemStack, id: string): void {
+  p.swing();
+  if (p.gameMode === 'creative') { if (!p.inventory.count(id)) p.inventory.add(new ItemStack(id)); return; }
+  if (st.count <= 1) { p.inventory.held = new ItemStack(id); return; }
+  p.inventory.consumeHeld(1);
+  if (p.inventory.add(new ItemStack(id)) > 0) p.host.emit?.('dropStack', { id });
+}
+
+/** Enxada: grama/terra/caminho → terra arada; terra grossa → terra. */
+export function useHoe(level: Level, p: Player, st: ItemStack, hit: BlockHit | null): boolean {
+  if (!hit || hit.face === 0) return false;
+  const s = level.getBlock(hit.x, hit.y, hit.z);
+  const n = bname(s);
+  if (level.getBlock(hit.x, hit.y + 1, hit.z) !== 0) return false;
+  let to: string | null = null;
+  if (n === 'grass_block' || n === 'dirt' || n === 'dirt_path') to = 'farmland';
+  else if (n === 'coarse_dirt' || n === 'rooted_dirt') to = 'dirt';
+  if (!to) return false;
+  level.setBlock(hit.x, hit.y, hit.z, S(to));
+  level.emit('sound', { name: 'hoe.till', x: hit.x, y: hit.y, z: hit.z });
+  if (p.gameMode !== 'creative') p.inventory.damageHeld(1, st.enchantLevel('unbreaking'));
+  p.swing();
+  return true;
+}
+
+export function useBoneMeal(level: Level, p: Player, hit: BlockHit | null): boolean {
+  if (!hit) return false;
+  if (!boneMeal(level, hit.x, hit.y, hit.z)) return false;
+  if (p.gameMode !== 'creative') p.inventory.consumeHeld(1);
+  p.swing();
+  return true;
+}
+

@@ -6,6 +6,7 @@ import { Living, type DamageSource } from '../entity/living';
 import type { EntityHost } from '../entity/entity';
 import { Inventory } from '../inventory/inventory';
 import { FoodData } from './food';
+import { trample } from '../../world/logic/growth';
 
 export type GameMode = 'survival' | 'creative' | 'spectator';
 
@@ -209,6 +210,7 @@ export class Player extends Living {
   }
 
   protected override onLand(fall: number): void {
+    if (fall > 0.5 && this.gameMode !== 'spectator' && 'breakBlock' in this.host) trample(this.host as never, Math.floor(this.x), Math.floor(this.y - 0.2), Math.floor(this.z), fall, true);
     if (this.gameMode !== 'survival' || this.inWater) return;
     const under = this.world.getBlock(Math.floor(this.x), Math.floor(this.y - 0.2), Math.floor(this.z));
     const name = this.world ? under : 0;

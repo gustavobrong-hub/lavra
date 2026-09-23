@@ -109,5 +109,13 @@ export class Input {
 
   /** para testes: simula apertar uma tecla */
   press(b: ButtonName): void { this.pressedQueue.push(b); this.synthetic.add(b); }
+  private readonly taps = new Set<ButtonName>();
+  /** para testes: aperta e solta dentro de exatamente um tick de jogo */
+  tap(b: ButtonName): void { this.pressedQueue.push(b); this.synthetic.add(b); this.taps.add(b); }
+  /** fim do tick: solta os toques de teste */
+  endTick(): void {
+    for (const b of this.taps) { this.synthetic.delete(b); this.releasedQueue.push(b); }
+    this.taps.clear();
+  }
   release(b: ButtonName): void { this.synthetic.delete(b); this.releasedQueue.push(b); }
 }

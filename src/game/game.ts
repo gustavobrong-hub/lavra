@@ -44,11 +44,13 @@ import { NaturalSpawner } from './spawning';
 import { spawnMob, createMob } from './entity/registry';
 import { registerMobVisuals } from '../render/entities/mobvisual';
 import { registerProjectileVisuals } from '../render/entities/projvisual';
-import { MOB_SPECS } from '../render/entities/models/specs';
+import { MOB_SPECS, loadGroupSpecs } from '../render/entities/models/specs';
 import { pickEntity, playerAttack, attackStrength, type EntityHit } from './player/combat';
 import type { Mob } from './entity/mob';
 import type { Horse } from './entity/species/tamables';
-import { throwItem, releaseBow, useSpawnEgg, holdDuration, hasArrows, THROWABLES } from './player/useitems';
+import { throwItem, releaseBow, useSpawnEgg, holdDuration, hasArrows, THROWABLES, useBucket, useHoe, useBoneMeal } from './player/useitems';
+import { installFluids } from '../world/logic/fluids';
+import { installGrowth, randomTicks, harvestBerries } from '../world/logic/growth';
 import type { BlockHit } from './raycast';
 import { Arrow } from './entity/projectiles';
 import { MerchantMenu } from './inventory/merchantmenu';
@@ -146,12 +148,15 @@ export class Game {
     this.spawner = new NaturalSpawner(this.level);
     registerMobVisuals(this.entityRenderer, MOB_SPECS);
     registerProjectileVisuals(this.entityRenderer);
+    void loadGroupSpecs().then(() => { registerMobVisuals(this.entityRenderer, MOB_SPECS); this.entityRenderer.reset(); });
     this.interaction = new Interaction(this.level, this.player);
     this.opaqueScene.add(this.entityRenderer.group);
     this.transScene.add(this.overlay.group);
     initRecipes();
     installBlockEntities(this.level);
     installGolemBuilding(this.level);
+    installFluids(this.level);
+    installGrowth(this.level);
     const icons = buildIconAtlas(this.pipeline.textureData);
     installIcons(icons);
     const sprite = itemSpriteFactory(icons);
@@ -396,12 +401,14 @@ export class Game {
     if (this.level.rules.doDaylightCycle) this.dayTime++;
     this.level.updateSky();
     this.level.tickBlocks();
+    randomTicks(this.level, Math.floor(p.x) >> 4, Math.floor(p.z) >> 4, 8, this.level.rules.randomTickSpeed);
     this.spawner.tick();
     this.level.entities.tick((e) => e !== p);
     this.pickupItems();
     if (p.gameMode === 'survival') p.food.tick(p, this.level.difficulty, this.level.rules.naturalRegeneration);
     const inv = p.inventory.armorValue();
     p.armorValue = inv.armor; p.armorToughness = inv.toughness; p.knockbackResistance = inv.kb;
+    this.input.endTick();
   }
 
   // ------------------------------------------------------------ usar itens (comer/beber)
@@ -409,7 +416,8 @@ export class Game {
   private useItem(st: ItemStack | null, hit: BlockHit | null): boolean {
     const p = this.player;
     if (p.usingItem) return false;
-    const usable = (s: ItemStack | null) => !!s && (!!holdDuration(s.id) || !!useDuration(s.id) || THROWABLES.has(s.id) || s.id.endsWith('_spawn_egg'));
+    const usable = (s: ItemStack | null) => !!s && (!!holdDuration(s.id) || !!useDuration(s.id) || THROWABLES.has(s.id) || s.id.endsWith('_spawn_egg')
+      || s.id.endsWith('bucket') || s.id.endsWith('_hoe') || s.id === 'bone_meal');
     if (!usable(st)) {
       // mão principal sem uso: escudo (ou comida) na mão secundária
       const off = p.inventory.offhand;
@@ -418,6 +426,9 @@ export class Game {
     }
     const s = st!;
     if (THROWABLES.has(s.id)) return throwItem(this.level, p, s);
+    if (s.id === 'bucket' || s.id === 'water_bucket' || s.id === 'lava_bucket') return useBucket(this.level, p, s);
+    if (s.id.endsWith('_hoe')) return useHoe(this.level, p, s, hit);
+    if (s.id === 'bone_meal') return useBoneMeal(this.level, p, hit);
     if (s.id.endsWith('_spawn_egg')) return useSpawnEgg(this.level, p, s, hit);
     if (s.id === 'bow' && !hasArrows(p)) return false;
     return this.startUsing(s, false);
@@ -603,6 +614,7 @@ export class Game {
     const name = BLOCKS[BLOCK_OF[st]].name;
     const p = this.player;
     if (name.endsWith('_bed')) return this.useBed(x, y, z, st);
+    if (name === 'sweet_berry_bush') return harvestBerries(this.level, x, y, z, st);
     if (name === 'crafting_table') { this.openScreen(new CraftingScreen(new CraftingGridMenu(p.inventory, 3))); return true; }
     if (name === 'furnace' || name === 'smoker' || name === 'blast_furnace') {
       const be = getBE<FurnaceBE>(this.level, x, y, z);

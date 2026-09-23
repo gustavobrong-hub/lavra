@@ -27,10 +27,23 @@ export const MOB_SPECS: Record<string, MobModelSpec> = {
   naufrago: { def: CARNICAL, variant: () => 'naufrago', babyHead: 1.5, handOffset: [-2, -10, 1] },
 };
 
-/** Specs dos grupos de arte: todo arquivo em defs/ que exporta `SPECS_*` entra automaticamente. */
-const groups = import.meta.glob('./defs/*.ts', { eager: true }) as Record<string, Record<string, unknown>>;
-for (const mod of Object.values(groups)) {
-  for (const [k, v] of Object.entries(mod)) if (k.startsWith('SPECS_') && v && typeof v === 'object') Object.assign(MOB_SPECS, v as Record<string, MobModelSpec>);
+/**
+ * Specs dos grupos de arte: todo arquivo em defs/ que exporta `SPECS_*` entra automaticamente.
+ * Carregamento tardio e tolerante: um arquivo com erro não impede os outros (nem o jogo) de carregar.
+ */
+const groups = import.meta.glob('./defs/*.ts') as Record<string, () => Promise<Record<string, unknown>>>;
+export async function loadGroupSpecs(): Promise<string[]> {
+  const failed: string[] = [];
+  await Promise.all(Object.entries(groups).map(async ([path, load]) => {
+    try {
+      const mod = await load();
+      for (const [k, v] of Object.entries(mod)) if (k.startsWith('SPECS_') && v && typeof v === 'object') Object.assign(MOB_SPECS, v as Record<string, MobModelSpec>);
+    } catch (e) {
+      failed.push(path);
+      console.warn(`modelos de ${path} não carregaram:`, e);
+    }
+  }));
+  return failed;
 }
 
 /** Garante um visual para todo tipo registrado (provisório até ganhar modelo). */
