@@ -1,0 +1,9 @@
+node_modules
+dist
+tests/e2e/.results
+test-results
+playwright-report
+.DS_Store
+*.log
+bench/results/*.tmp
+tests/.out

@@ -1,0 +1,27 @@
+:root {
+  --bg: #0f1115;
+  --panel: rgba(18, 20, 26, 0.86);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --text: #f1eee6;
+  --muted: #a9a59b;
+  --accent: #e8a33d;
+  --accent-2: #5fc7d6;
+  --danger: #d9534f;
+  --font: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "SFMono-Regular", "Menlo", "Consolas", monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--text); font-family: var(--font);
+  -webkit-font-smoothing: antialiased; user-select: none;
+}
+#game { position: fixed; inset: 0; display: block; width: 100vw; height: 100vh; outline: none; image-rendering: auto; }
+#ui { position: fixed; inset: 0; pointer-events: none; }
+#ui > * { pointer-events: auto; }
+.debug { position: fixed; inset: 8px; display: flex; justify-content: space-between; pointer-events: none; font: 13px/1.35 var(--mono); }
+.debug span { display: table; background: rgba(0, 0, 0, 0.45); color: #eaeaea; padding: 0 4px; margin-bottom: 2px; white-space: pre; }
+.debug-right { text-align: right; }
+.debug-right span { margin-left: auto; }
+.fatal { position: fixed; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; }
+.fatal h1 { color: var(--accent); font-size: 48px; margin: 0 0 12px; }
