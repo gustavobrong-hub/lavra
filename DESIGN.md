@@ -127,16 +127,23 @@ Pipeline por coluna, no worker:
 - Saída também traz o **grafo de visibilidade** da seção (quais pares de faces se enxergam) para culling de cavernas.
 
 ### 4.7 Renderização
-Ver D-001/D-002. Frame:
-1. **Sombras em cascata** (3–4 cascatas, PCF com penumbra variável; cascatas distantes atualizadas em frames alternados).
-2. **Cena HDR** (RGBA16F + normais/material em MRT + depth): terreno opaco/recortado (WebGL2 puro), entidades (Three).
-3. **Céu** físico (LUTs de transmitância e céu no estilo Hillaire), sol, lua com fases, estrelas.
-4. **Nuvens volumétricas** em baixa resolução com reprojeção temporal.
-5. **Água** (reflexo SSR + fallback do céu, refração, absorção por profundidade, ondas, cáusticas, espuma) e
-   translúcidos ordenados por seção.
-6. **Pós**: SSAO, neblina volumétrica/raios de luz, bloom (pirâmide de mips), exposição automática,
-   DOF e motion blur opcionais, tonemapping fílmico + correção de cor, TAA/FXAA.
-Presets **Baixo/Médio/Alto/Ultra** controlam resolução de sombra, nº de cascatas, passos de nuvem, SSR, SSAO, escala de render.
+Ver D-001/D-002 e D-015…D-020. Frame (em `src/render/pipeline.ts`):
+1. **Bloco Frame (UBO)** com câmera, sol/lua, nuvens, névoa e efeitos; modelo do céu em TS (`skymodel.ts`) calcula a
+   transmitância do sol na altura da câmera e das nuvens.
+2. **Sombras em cascata** (`shadows.ts`, até 4 camadas de um `TEXTURE_2D_ARRAY` de profundidade), esferas por fatia do
+   frustum, centro alinhado aos texels no espaço da luz; cascatas distantes redesenhadas em quadros alternados, com a
+   matriz corrigida pelo deslocamento da câmera.
+3. **LUT do céu** 256×128 (dispersão) + mipmaps, lida por céu, névoa, reflexos e irradiância ambiente.
+4. **Cena HDR** (RGBA16F + normais em MRT + depth): terreno opaco/recortado (WebGL2 puro), entidades (Three).
+5. **Atmosfera** (tela cheia, lê a profundidade copiada): céu, sol quadrado, lua com fases, estrelas, via láctea e
+   **nuvens em blocos** (DDA numa camada de células 12×12×4), inclusive na frente do relevo; o "mar distante" abaixo do
+   horizonte usa a mesma cor que a borda da névoa.
+6. **Água** (reflexo em espaço de tela com refino binário + céu/nuvens analíticos, refração, absorção, trilha do sol,
+   espuma), translúcidos, partículas e mão.
+7. **Pós** (`post/postfx.ts`): exposição automática com adaptação, bloom em 6 mips (limiar pela exposição), raios de
+   sol em meia resolução, lens flare pela visibilidade do sol, ACES + gradação por hora do dia, FXAA.
+Presets **Baixo/Médio/Alto/Ultra** controlam cascatas e resolução das sombras, distância das nuvens, SSR, bloom/raios,
+partículas e escala de render; tudo ajustável na tela de gráficos.
 
 ### 4.8 Simulação
 - Loop fixo de **20 ticks/s**, render com interpolação.
@@ -209,3 +216,20 @@ Presets **Baixo/Médio/Alto/Ultra** controlam resolução de sombra, nº de casc
   bambu, tinta preta de carvão, tinta marrom de cogumelo, lanterna do mar com pó de lumita, farol com o coração do chefe,
   ferramentas ígneas na bancada (diamante + lingote ígneo) em vez da mesa de ferraria.
 - **D-014 — Fome aparece como "coxinhas"** no HUD (ícone próprio), mantendo os números do original.
+- **D-015 — Céu por LUT de dispersão recalculada todo quadro** (Rayleigh + Mie + ozônio ×2,5, espalhamento múltiplo
+  aproximado por um sol "elevado" isotrópico, mais aerossol na hora dourada). Calibrado numericamente
+  (`scripts/tmp/skycal2.ts`) para zênite azul ao meio-dia, dourado perto do sol no fim da tarde, lavanda/rosa no
+  crepúsculo e roxo no fim. A irradiância ambiente vem dos mipmaps da mesma LUT, então a luz ambiente fica quente do
+  lado do sol e fria do outro.
+- **D-016 — Nuvens em blocos por DDA, não volumétricas.** Combinam com o estilo e com as referências pedidas; o mapa
+  de células é ruído equalizado de 1024×1024 (cobertura exata), periódico para acompanhar a câmera com precisão.
+  A luz que chega às nuvens é a do sol a ~9 km, por isso ficam rosadas alguns minutos depois do pôr do sol.
+- **D-017 — Superfície da água: topo e face de baixo ocupam o mesmo lugar**; o shader descarta a face que não está de
+  frente para a câmera (antes a face de baixo cobria o topo e a água nunca refletia o sol).
+- **D-018 — Especular da água em dois lobos** (largo para a trilha contínua, fino sobre ondulação de alta frequência
+  para cintilar), porque o lobo fino sozinho quase nunca alinhava com as normais das ondas.
+- **D-019 — Partículas num único draw instanciado** com blend pré-multiplicado (aditivas saem com alfa 0) e ordenação
+  por baldes de distância; emissores de blocos por varredura incremental das seções próximas.
+- **D-020 — Vitrine na tela inicial:** o próprio mundo roda atrás do menu com uma câmera panorâmica ao entardecer;
+  parâmetros de desenvolvimento na URL (`seed`, `pos`, `time`…) pulam o menu (usado pelos testes).
+

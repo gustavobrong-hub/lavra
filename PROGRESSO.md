@@ -57,29 +57,29 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 - [x] Cama (pular a noite, ponto de respawn)
 
 ## M7 — Animais e inimigos
-- [~] Sistema de entidades, modelos por caixas com skins procedurais, animação
+- [x] Sistema de entidades, modelos por caixas com skins procedurais, animação
 - [x] A* na grade de voxels, IA por objetivos (vagar, fugir, perseguir, atacar)
 - [x] Spawn por luz/bioma, limites de população, despawn
-- [~] Animais: vaca, porco, ovelha, galinha, cavalo, lobo, gato, coelho, peixes, Musgarto (+ filhotes, reprodução, drops) — lógica pronta; modelos em produção
+- [x] Animais: vaca, porco, ovelha, galinha d'angola, cavalo crioulo, lobo-guará, gato, tapiti, peixes (lambari, tambaqui, baiacu, acará), Musgarto (+ filhotes, reprodução, drops), com modelos e variantes
 - [x] Mecânicas: tosquiar, ordenhar, ovos, domesticar lobo e gato, selar e montar cavalo
-- [~] Inimigos: Carniçal, Ossudo, Tecelã, Pavio, Feiticeira, Gosma, Assombro, Náufrago, Vulto, Espreitador (+ Fagulha e Brasal do Ínfero) — lógica pronta; modelos em produção
+- [x] Inimigos: Carniçal, Ossudo, Tecelã, Pavio, Feiticeira, Gosma, Assombro, Náufrago, Vulto, Espreitador (+ Fagulha e Brasal do Ínfero), com modelos e animações
 - [x] Combate: cooldown, crítico, knockback, armadura
 
 ## M8 — Vilas e aldeões
-- [ ] Vilas por bioma (casas de vários tamanhos, caminhos, fazendas, poço, oficinas, praça, postes de luz)
-- [ ] Aldeões com profissões, rotina dia/noite, reprodução, fuga de inimigos
-- [ ] Comércio com níveis
-- [ ] Sentinela (protetor da vila)
+- [x] Vilas por bioma (casas de vários tamanhos, caminhos, fazendas, poço, oficinas, praça, postes de luz, chaminés com fumaça)
+- [x] Aldeões com profissões, rotina dia/noite, reprodução, fuga de inimigos
+- [x] Comércio com níveis
+- [x] Sentinela (protetor da vila)
 
 ## M9 — Líquidos e agricultura
-- [ ] Água e lava escorrendo, fontes infinitas, interação (obsidiana, pedregulho, pedra), baldes
-- [ ] Enxada, terra arada, irrigação, plantio, crescimento, colheita, farinha de osso
+- [x] Água e lava escorrendo, fontes infinitas, interação (obsidiana, pedregulho, pedra), baldes
+- [x] Enxada, terra arada, irrigação, plantio, crescimento, colheita, farinha de osso
 
 ## M10 — Circuitos (fulgor)
-- [ ] Pó de fulgor (força 0–15), tocha, repetidor, comparador, alavanca, botão, placa de pressão
-- [ ] Lâmpada, porta, alçapão, portão, pistão e pistão pegajoso, observador, TNT
+- [x] Pó de fulgor (força 0–15), tocha, repetidor, comparador, alavanca, botão, placa de pressão
+- [x] Lâmpada, porta, alçapão, portão, pistão e pistão pegajoso, observador, TNT
 
-## M11 — Estruturas
+## M11 — Estruturas (adiado a pedido: foco na estética)
 - [ ] Ruínas, masmorras (baú + gerador), templo do deserto, templo da selva, minas abandonadas com trilhos, naufrágios
 
 ## M12 — Sistemas extras
@@ -95,27 +95,29 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 - [ ] Arena e chefe Ignarca com fases e recompensa
 
 ## M14 — Shaders avançados e presets
-- [ ] Sombras em cascata com bordas suaves
-- [ ] Céu com dispersão atmosférica, estrelas, lua com fases, nuvens volumétricas
-- [ ] Raios de luz e neblina volumétrica
-- [ ] Água: reflexo, refração, ondas, cáusticas, espuma
-- [ ] Vento em folhas, grama e plantas
-- [ ] PBR procedural (normal, rugosidade, metais, pedras molhadas)
-- [ ] Bloom em emissivos, SSAO, tonemapping fílmico, correção de cor, exposição automática, TAA/FXAA
-- [ ] Clima: chuva, neve, tempestade com raios, superfícies molhadas e poças
-- [ ] DOF e motion blur opcionais
-- [ ] Partículas: quebra, fumaça, respingos, chuva, faíscas
-- [ ] Presets Baixo/Médio/Alto/Ultra
+- [x] Sombras em cascata (até 4) estabilizadas por texel, PCF suave, folhas translúcidas contra a luz
+- [x] Céu com dispersão atmosférica (LUT Rayleigh + Mie + ozônio, espalhamento múltiplo aproximado), sol quadrado em pixel art, lua com fases e halo, estrelas que giram com o céu
+- [x] Nuvens em blocos 3D iluminadas pelo sol/lua (rosadas depois do pôr do sol), com sombra no chão
+- [x] Raios de sol (espaço de tela) e névoa baixa dourada ao entardecer
+- [x] Água: reflexo em espaço de tela com refino + céu/nuvens refletidos, refração, absorção, ondas, trilha do sol com cintilação, espuma, cáusticas, mar distante contínuo
+- [x] Vento em folhas, grama e plantas
+- [x] PBR procedural (normal, rugosidade, metais, pedras molhadas e poças)
+- [x] Bloom com limiar pela exposição, lens flare, tonemapping ACES, gradação por hora do dia, exposição automática, FXAA
+- [~] Clima: chuva e neve em partículas, céu encoberto, superfícies molhadas (sem raios de tempestade)
+- [ ] SSAO, TAA, DOF e motion blur (o AO por vértice cobre boa parte)
+- [x] Partículas: detritos, fumaça de fogueiras/chaminés/tochas, vaga-lumes, folhas, chuva, neve, respingos, corações, críticos
+- [x] Presets Baixo/Médio/Alto/Ultra e ajustes finos
 
 ## M15 — Áudio e menus
 - [ ] Sons procedurais (passos por material, quebrar, colocar, dano, criaturas, chuva, vento, cavernas)
 - [ ] Música ambiente procedural
-- [ ] Menu principal, criar mundo (nome, seed, modo), lista de mundos, pausa, configurações (gráficos, distância, FOV, sensibilidade, volume, teclas)
+- [~] Tela inicial com o mundo ao fundo, novo mundo com semente, pausa, gráficos, controles (falta lista de mundos e volume)
 - [ ] HUD completo; textos em pt-BR
 - [ ] Salvamento automático e manual de vários mundos
 
 ## M16 — Publicação
-- [ ] Build de produção, publicação online e link
+- [x] Build de produção conferido (`npm run build` + carga sem erros)
+- [~] Publicação online (GitHub Pages)
 
 ## M17 — Polimento
 - [ ] Ciclo 1: jogar como jogador exigente, listar ≥ 20 problemas, corrigir os principais
@@ -133,3 +135,8 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 - 2026-09-23 — M1–M4 (commit 51f3130): motor de voxels, geração com 37 biomas, luz, mesher em workers, renderizador WebGL2. 60 FPS no Apple M4 (Playwright).
 - 2026-09-23 — M3/M5 (commit 3a4aa2a): física fiel do jogador, quebrar/colocar, itens, crafting e menus.
 - 2026-09-23 — M5/M6/M7 parcial (commit a5ae9a8): 408 texturas de bloco e 273 sprites de itens pintados em código; HUD, telas de inventário, fornalha e baús; sobrevivência completa; IA de criaturas (objetivos + A*), 27 espécies com lógica, spawn natural, combate, arco, escudo, arremessáveis, explosões. 60 testes unitários + e2e de luta/ordenha/tosquia/arco/montaria passando. Modelos 3D das criaturas sendo feitos em paralelo (3 grupos) com a galeria `scripts/mobgallery.mjs`.
+- 2026-09-23 — M8–M10 (commits 4da9918, 2e36ab4, b90881e): vilas e aldeões com comércio e sentinela; líquidos e agricultura; circuitos de fulgor com a semântica do original.
+- 2026-09-23 — Modelos das criaturas concluídos (commit b8733e3).
+- 2026-09-23 — Mudança de prioridade pedida: menos mecânicas específicas, foco na estética (referências: pôr do sol dourado no pântano, crepúsculo roxo com nuvens em blocos e água espelhada, noite nevada com lua, estrelas e chaminés).
+- 2026-09-23 — Estética (commit 1b17f16): LUT de céu físico, nuvens em blocos, sombras em cascata, água espelhada (corrigida a face de baixo que cobria a superfície), bloom, raios, lens flare, exposição automática, gradação. 60 FPS no Apple M4 com distância 12.
+- 2026-09-23 — Partículas e chaminés (commit 1cfd1c0); tela inicial, pausa e menus (commit a1da8af).
