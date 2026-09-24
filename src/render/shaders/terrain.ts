@@ -1,8 +1,8 @@
 /** Shaders do terreno (camadas sólida, recortada e translúcida; também o passe de sombra). */
-import { COMMON_GLSL, LIGHTING_GLSL } from './common';
+import { COMMON_GLSL, COMMON_VS_GLSL, LIGHTING_GLSL } from './common';
 
 export const TERRAIN_VS = /* glsl */ `
-${COMMON_GLSL}
+${COMMON_VS_GLSL}
 layout(location = 0) in uvec3 aData;
 uniform vec3 uOrigin;
 uniform mat4 uLightViewProj; // só no passe de sombra
@@ -12,6 +12,7 @@ out vec2 vUV;
 flat out uint vLayer;
 flat out uint vNormal;
 flat out uint vFlags;
+flat out uint vWave;
 out float vAO;
 out vec2 vLight;
 out vec3 vTint;
@@ -31,6 +32,7 @@ void main() {
   vec3 p = vec3(float(w0 & 511u), float((w0 >> 9u) & 511u), float((w0 >> 18u) & 511u)) * (1.0 / 16.0);
   vNormal = (w0 >> 27u) & 7u;
   uint wave = (w0 >> 30u) & 3u;
+  vWave = wave;
   vUV = vec2(float(w1 & 511u), float((w1 >> 9u) & 511u)) * (1.0 / 16.0);
   vLayer = (w1 >> 18u) & 2047u;
   vAO = float((w1 >> 29u) & 3u) / 3.0;
@@ -72,6 +74,7 @@ in vec2 vUV;
 flat in uint vLayer;
 flat in uint vNormal;
 flat in uint vFlags;
+flat in uint vWave;
 in float vAO;
 in vec2 vLight;
 in vec3 vTint;
@@ -151,9 +154,8 @@ void main() {
     Nmap = normalize(mix(Nmap, N, puddle));
   }
   float ao = mix(1.0, 0.28 + 0.72 * vAO, uMisc.z);
-  // plantas não recebem sombra direcional forte
-  float shadow = 1.0;
-  vec3 color = surfaceLight(albedo.rgb, Nmap, vLight.x, vLight.y, ao, shadow, smoothness, metal, porosity, V, emission * uMisc.w);
+  float foliage = vWave != 0u ? 1.0 : 0.0;
+  vec3 color = surfaceLight(albedo.rgb, Nmap, N, vRel, vLight.x, vLight.y, ao, smoothness, metal, porosity, V, emission * uMisc.w, foliage);
   if ((vFlags & 1u) != 0u) {
     // cáusticas simples no fundo d'água
     float t = uMisc.x / 20.0;
@@ -163,7 +165,10 @@ void main() {
   }
   color = applyFog(color, vRel);
 #ifdef TRANSLUCENT
-  outColor = vec4(color * albedo.a, albedo.a);
+  // vidro perto de tochas/lanternas: a luz de dentro "acende" a janela vista de fora
+  float glow = pow(vLight.y, 3.0) * (1.0 - vLight.x * 0.6);
+  color += vec3(1.0, 0.6, 0.28) * glow * 0.55 * (1.0 - albedo.a * 0.5);
+  outColor = vec4(color * albedo.a + vec3(1.0, 0.6, 0.28) * glow * 0.35 * (1.0 - albedo.a), albedo.a);
 #else
   outColor = vec4(color, 1.0);
 #endif

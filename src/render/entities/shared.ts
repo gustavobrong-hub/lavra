@@ -7,18 +7,38 @@ import type { FrameUBO } from '../gl/frameubo';
 import type { TextureArrays } from '../textures/atlas';
 
 const v4 = () => ({ value: new THREE.Vector4() });
-export const SHARED = {
+const VEC_UNIFORMS = {
   uCamPos: v4(), uSunDir: v4(), uMoonDir: v4(), uSunColor: v4(), uSkyAmbient: v4(), uFogColor: v4(), uFogParams: v4(),
   uBlockLight: v4(), uWeather: v4(), uMisc: v4(), uSkyZenith: v4(), uSkyHorizon: v4(),
+  uSunPos: v4(), uSunDisc: v4(), uClouds: v4(), uFx: v4(), uCascades: v4(), uShadowParams: v4(),
 };
+/** Texturas do pipeline (LUT do céu, mapa de nuvens, sombras) embrulhadas para o Three. */
+export const SHARED_TEX = {
+  uSkyLUT: { value: new THREE.ExternalTexture(null) as THREE.Texture },
+  uCloudMap: { value: new THREE.ExternalTexture(null) as THREE.Texture },
+  uShadowMap: { value: new THREE.ExternalTexture(null) as THREE.Texture },
+};
+export const SHARED = {
+  ...VEC_UNIFORMS,
+  ...SHARED_TEX,
+  uShadow: { value: new Float32Array(64) },
+};
+
+/** Aponta as texturas compartilhadas para os objetos GL do pipeline. */
+export function setSharedTextures(sky: WebGLTexture, clouds: WebGLTexture, shadow: WebGLTexture): void {
+  (SHARED_TEX.uSkyLUT.value as THREE.ExternalTexture).sourceTexture = sky;
+  (SHARED_TEX.uCloudMap.value as THREE.ExternalTexture).sourceTexture = clouds;
+  (SHARED_TEX.uShadowMap.value as THREE.ExternalTexture).sourceTexture = shadow;
+}
 
 /** Copia os valores do UBO para os uniforms compartilhados (uma vez por frame). */
 export function syncShared(f: FrameUBO): void {
-  for (const k of Object.keys(SHARED) as (keyof typeof SHARED)[]) {
+  for (const k of Object.keys(VEC_UNIFORMS) as (keyof typeof VEC_UNIFORMS)[]) {
     const key = k.slice(1, 2).toLowerCase() + k.slice(2);
     const a = f.get(key as never);
-    SHARED[k].value.set(a[0], a[1], a[2], a[3]);
+    VEC_UNIFORMS[k].value.set(a[0], a[1], a[2], a[3]);
   }
+  SHARED.uShadow.value.set(f.shadowData());
 }
 
 let blockTex: THREE.DataArrayTexture | null = null;

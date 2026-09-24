@@ -29,6 +29,7 @@ export const TEX_META: Record<string, TexMeta> = {
   portal: { frames: 16, frameTime: 2, emissive: 1, material: 'emissive' },
   magma: { frames: 4, frameTime: 8, emissive: 0.6, material: 'lava' },
   grass_side: { tintMask: true, material: 'dirt' },
+  grass_side_snowy: { tintMask: true, material: 'dirt' },
   grass_top: { randomRotate: true, material: 'plant' },
   dirt: { randomRotate: true, material: 'dirt' },
   sand: { randomRotate: true, material: 'sand' },

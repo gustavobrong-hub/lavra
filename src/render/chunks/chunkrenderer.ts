@@ -52,6 +52,8 @@ export class ChunkRenderer {
   loadedColumn: (cx: number, cz: number) => boolean = () => true;
   /** seção sabidamente só de ar ainda sem malha */
   isEmptySection: (cx: number, sy: number, cz: number) => boolean = () => false;
+  /** texturas globais do pipeline (LUT do céu, nuvens, sombras) nas unidades 6, 7 e 8 */
+  globals: { sky: WebGLTexture; clouds: WebGLTexture; shadow: WebGLTexture } | null = null;
 
   constructor(private readonly gl: WebGL2RenderingContext, private readonly tex: BlockTextures) {
     // índices de quads compartilhados
@@ -77,6 +79,9 @@ export class ChunkRenderer {
       p.sampler('uNormalMap', 1);
       p.sampler('uSpec', 2);
       p.sampler('uMeta', 3);
+      p.sampler('uSkyLUT', 6);
+      p.sampler('uCloudMap', 7);
+      p.sampler('uShadowMap', 8);
     }
     this.progWater.sampler('uSceneColor', 4);
     this.progWater.sampler('uSceneDepth', 5);
@@ -210,12 +215,20 @@ export class ChunkRenderer {
   }
 
   // ------------------------------------------------------------ desenho
-  private bindTextures(): void {
+  private bindTextures(shadowPass = false): void {
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex.albedo);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex.normal);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.tex.spec);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.tex.meta);
+    const g = this.globals;
+    if (g) {
+      gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D, g.sky);
+      gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, g.clouds);
+      // no passe de sombra o mapa é o próprio alvo: não pode estar ligado para leitura
+      gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D_ARRAY, shadowPass ? null : g.shadow);
+    }
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   /** Camadas opacas (sólida + recortada). O framebuffer de destino já deve estar ligado. */
@@ -290,7 +303,7 @@ export class ChunkRenderer {
     const p = this.progShadow;
     p.use();
     gl.uniformMatrix4fv(p.loc('uLightViewProj'), false, lightViewProj);
-    this.bindTextures();
+    this.bindTextures(true);
     const loc = p.loc('uOrigin');
     let count = 0;
     for (const s of this.sections.values()) {

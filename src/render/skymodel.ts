@@ -6,15 +6,25 @@ import { DAY_TICKS } from '../core/constants';
 import { clamp, smoothstep } from '../core/math';
 
 export interface SkyState {
+  /** direção da luz principal (sol de dia, lua à noite) — usada na iluminação e nas sombras */
   sunDir: [number, number, number];
+  /** direção real do sol */
+  sunPos: [number, number, number];
   moonDir: [number, number, number];
   day: number; // 0 noite … 1 dia
-  sunColor: [number, number, number]; // radiância (HDR, linear)
+  sunColor: [number, number, number]; // luz direta principal (HDR, linear)
+  sunDisc: [number, number, number]; // radiância do disco do sol visto da câmera
+  sunExtra: [number, number, number]; // radiância do sol fora da atmosfera
+  moonLight: [number, number, number]; // luz da lua fora da atmosfera (para o céu)
+  cloudLight: [number, number, number]; // luz que chega às nuvens (sol + lua)
   zenith: [number, number, number];
   horizon: [number, number, number];
   ambient: [number, number, number];
   fog: [number, number, number];
   moonPhase: number; // 0..1
+  sunset: number; // 0..1, perto do nascer/pôr do sol
+  night: number; // 0..1
+  stars: number; // 0..1
   /** escurecimento do céu (0 meio-dia … 11 noite) como no original, para spawn */
   skyDarken: number;
   celestial: number;
@@ -38,58 +48,92 @@ export function skyDarkenFor(dayTime: number, rain: number, thunder: number): nu
   return Math.floor((1 - f) * 11);
 }
 
-const BETA: [number, number, number] = [0.18, 0.42, 1.0]; // dispersão de Rayleigh relativa (vermelho passa mais)
+// Mesmo modelo da LUT do céu (shaders/atmosphere.ts), em km.
+const R_GROUND = 6360, R_TOP = 6420, CAM_ALT = 0.35;
+const BETA_R = [5.802e-3, 13.558e-3, 33.1e-3];
+const BETA_M_EXT = 2.2e-3;
+const BETA_O = [1.625e-3, 4.703e-3, 0.2125e-3];
+const H_R = 8, H_M = 1.2;
+/** irradiância do sol fora da atmosfera (unidades do jogo) */
+export const SUN_E = 3.7;
+/** luz da lua cheia em relação ao sol (bem acima da real, para dar jogo à noite) */
+const MOON_E = 0.08;
+/** reforço artístico do brilho do céu */
+export const SKY_SCALE = 3.6;
+
+/** Transmitância de uma altitude (km) até o topo da atmosfera numa direção (y para cima). */
+export function transmittance(alt: number, d: [number, number, number], out: [number, number, number] = [0, 0, 0]): [number, number, number] {
+  const py = R_GROUND + alt;
+  const b = py * d[1];
+  const cG = py * py - R_GROUND * R_GROUND;
+  const discG = b * b - cG;
+  // a borda do disco solar some aos poucos atrás do horizonte (±0,4°)
+  let edge = 1;
+  if (discG > 0 && b < 0) {
+    const dip = Math.acos(R_GROUND / py);
+    const el = Math.asin(clamp(d[1], -1, 1));
+    edge = smoothstep(-dip - 0.007, -dip + 0.007, el);
+    if (edge <= 0) { out[0] = out[1] = out[2] = 0; return out; }
+  }
+  const cT = py * py - R_TOP * R_TOP;
+  const L = -b + Math.sqrt(Math.max(0, b * b - cT));
+  const N = 24;
+  let odR = 0, odM = 0, odO = 0, prev = 0;
+  for (let i = 0; i < N; i++) {
+    const f = (i + 1) / N;
+    const t = L * f * f;
+    const ds = t - prev;
+    const tm = (t + prev) / 2;
+    prev = t;
+    const qx = d[0] * tm, qy = py + d[1] * tm, qz = d[2] * tm;
+    const h = Math.hypot(qx, qy, qz) - R_GROUND;
+    odR += Math.exp(-h / H_R) * ds;
+    odM += Math.exp(-h / H_M) * ds;
+    odO += Math.max(0, 1 - Math.abs(h - 25) / 15) * ds;
+  }
+  for (let k = 0; k < 3; k++) out[k] = Math.exp(-(BETA_R[k] * odR + BETA_M_EXT * odM + BETA_O[k] * odO)) * edge;
+  return out;
+}
+
+const tmpT: [number, number, number] = [0, 0, 0];
 
 export function computeSky(dayTime: number, rain: number, thunder: number, moonPhase: number): SkyState {
   const c = celestialAngle(dayTime);
   const ang = c * Math.PI * 2;
   // sol nasce a leste (+X) e se põe a oeste, leve inclinação para o sul
-  const sunDir = normalize([-Math.sin(ang), Math.cos(ang), 0.18]);
-  const moonDir: [number, number, number] = [-sunDir[0], -sunDir[1], -sunDir[2] * 0.6];
-  const moonN = normalize(moonDir);
-  const h = sunDir[1];
+  const sunPos = normalize([-Math.sin(ang), Math.cos(ang), 0.18]);
+  const moonN = normalize([-sunPos[0], -sunPos[1], -sunPos[2] * 0.6]);
+  const h = sunPos[1];
   const day = smoothstep(-0.18, 0.2, h);
-  // massa de ar aproximada
-  // massa de ar (Kasten–Young) a partir do ângulo zenital
-  const zenDeg = Math.min(90, (Math.acos(clamp(h, -1, 1)) * 180) / Math.PI);
-  const airmass = 1 / (Math.cos((zenDeg * Math.PI) / 180) + 0.50572 * Math.pow(96.07995 - zenDeg, -1.6364));
-  const trans = BETA.map((b) => Math.exp(-b * Math.min(airmass, 40) * 0.12)) as [number, number, number];
-  const sunI = 3.2 * smoothstep(-0.08, 0.08, h);
-  const sunColor = trans.map((t) => t * sunI) as [number, number, number];
-  // cores base (linear)
-  const zenDay: [number, number, number] = [0.09, 0.22, 0.62];
-  const horDay: [number, number, number] = [0.42, 0.58, 0.85];
-  const zenNight: [number, number, number] = [0.0012, 0.0022, 0.0065];
-  const horNight: [number, number, number] = [0.004, 0.0065, 0.013];
-  const sunset = smoothstep(0.35, 0.02, Math.abs(h)) * smoothstep(-0.25, -0.02, h + 0.1);
-  const horSet: [number, number, number] = [1.0, 0.36, 0.12];
-  const zenSet: [number, number, number] = [0.16, 0.14, 0.32];
+  const clear = 1 - rain * 0.82 - thunder * 0.1;
+  // sol visto da câmera
+  const Ts = transmittance(CAM_ALT, sunPos, [0, 0, 0]);
+  const sunLight = Ts.map((t) => t * SUN_E * clear) as [number, number, number];
+  // lua: fase muda a intensidade; tom levemente azulado (visão noturna)
+  const phaseLight = 0.3 + 0.7 * Math.abs(Math.cos(moonPhase * Math.PI));
+  const moonE = SUN_E * MOON_E * phaseLight;
+  const moonLight: [number, number, number] = [moonE * 0.78, moonE * 0.9, moonE * 1.12];
+  const Tm = transmittance(CAM_ALT, moonN, tmpT);
+  const moonDirect = [moonLight[0] * Tm[0], moonLight[1] * Tm[1], moonLight[2] * Tm[2]].map((x) => x * (1 - rain * 0.85)) as [number, number, number];
+  // luz principal: sol enquanto ele estiver acima do horizonte, depois a lua
+  const useSun = h > -0.03;
+  const sunDir = useSun ? sunPos : moonN;
+  const light = useSun ? sunLight : moonDirect;
+  // nuvens (≈9 km) ainda veem o sol avermelhado alguns minutos depois do pôr; a lua entra à parte no shader
+  const Tc = transmittance(9, sunPos, [0, 0, 0]);
+  const cloudLight = [0, 1, 2].map((k) => Tc[k] * SUN_E * clear) as [number, number, number];
+  const sunDisc = Ts.map((t) => t * SUN_E * 28 * (1 - rain * 0.97)) as [number, number, number];
+  // cores legadas (aproximadas) para quem ainda não usa a LUT
   const mix3 = (a: number[], b: number[], t: number) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t] as [number, number, number];
-  let zenith = mix3(zenNight, zenDay, day);
-  let horizon = mix3(horNight, horDay, day);
-  zenith = mix3(zenith, zenSet, sunset * 0.5);
-  horizon = mix3(horizon, horSet, sunset * 0.8);
-  // chuva: céu acinzentado e mais escuro
-  const grayK = rain * 0.75;
-  const gray = (v: [number, number, number], k: number) => {
-    const l = v[0] * 0.3 + v[1] * 0.59 + v[2] * 0.11;
-    return mix3(v, [l, l, l], grayK).map((x) => x * k) as [number, number, number];
-  };
-  zenith = gray(zenith, 1 - rain * 0.45 - thunder * 0.3);
-  horizon = gray(horizon, 1 - rain * 0.4 - thunder * 0.3);
-  const sunOut = sunColor.map((x) => x * (1 - rain * 0.8)) as [number, number, number];
-  // luz da lua
-  const moonH = moonN[1];
-  const phaseLight = 0.35 + 0.65 * Math.abs(Math.cos(moonPhase * Math.PI));
-  const moonI = smoothstep(-0.05, 0.2, moonH) * (1 - day) * 0.22 * phaseLight * (1 - rain * 0.7);
-  const moonColor: [number, number, number] = [0.55 * moonI, 0.65 * moonI, 0.9 * moonI];
-  const lightDir = day > 0.02 || moonI < 0.001 ? sunDir : moonN;
-  const light = day > 0.02 ? sunOut : moonColor;
-  // ambiente do céu (irradiância difusa)
-  const ambient = mix3(horizon, zenith, 0.5).map((x, i) => x * 1.35 + light[i] * 0.08 + (1 - day) * [0.012, 0.016, 0.03][i]) as [number, number, number];
+  const zenith = mix3([0.0012, 0.0022, 0.0065], [0.09, 0.22, 0.62], day);
+  const horizon = mix3([0.004, 0.0065, 0.013], [0.42, 0.58, 0.85], day);
+  const ambient = mix3(horizon, zenith, 0.5).map((x) => x * 1.35) as [number, number, number];
   const fog = mix3(horizon, zenith, 0.15);
+  const sunset = smoothstep(0.32, 0.0, Math.abs(h + 0.03));
+  const stars = clamp((-h - 0.05) * 4, 0, 1) * (1 - rain);
   return {
-    sunDir: lightDir, moonDir: moonN, day, sunColor: light, zenith, horizon, ambient, fog, moonPhase,
+    sunDir, sunPos, moonDir: moonN, day, sunColor: light, sunDisc, sunExtra: [SUN_E, SUN_E, SUN_E],
+    moonLight, cloudLight, zenith, horizon, ambient, fog, moonPhase, sunset, night: 1 - day, stars,
     skyDarken: skyDarkenFor(dayTime, rain, thunder), celestial: c,
   };
 }

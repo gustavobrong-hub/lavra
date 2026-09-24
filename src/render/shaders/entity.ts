@@ -3,7 +3,7 @@
  * Usam os mesmos nomes de uniform do bloco Frame (como uniforms comuns), então reaproveitam
  * a mesma iluminação e neblina do terreno.
  */
-import { LIGHTING_GLSL } from './common';
+import { LIGHTING_GLSL, SKY_FUNCS_GLSL, UTIL_GLSL } from './common';
 
 /** Mesmos nomes do UBO, como uniforms soltos (atualizados pelo pipeline a cada frame). */
 export const FRAME_UNIFORMS_GLSL = /* glsl */ `
@@ -19,23 +19,18 @@ uniform vec4 uWeather;
 uniform vec4 uMisc;
 uniform vec4 uSkyZenith;
 uniform vec4 uSkyHorizon;
-const float PI = 3.14159265;
-float lightCurve(float f) { return f / (4.0 - 3.0 * f); }
-vec3 skyGradient(vec3 d) {
-  vec3 col = mix(uSkyHorizon.rgb, uSkyZenith.rgb, pow(clamp(d.y, 0.0, 1.0), 0.55));
-  col = mix(col, uSkyHorizon.rgb * 0.35, smoothstep(0.0, -0.3, d.y));
-  float sd = max(dot(d, uSunDir.xyz), 0.0);
-  col += uSunColor.rgb * (pow(sd, 12.0) * 0.12 + pow(sd, 180.0) * 0.6) * uSunDir.w;
-  return col;
-}
-vec3 applyFog(vec3 color, vec3 rel) {
-  float dist = length(rel);
-  vec3 dir = rel / max(dist, 1e-4);
-  float f = 1.0 - exp(-dist * uFogColor.w);
-  f = max(f, smoothstep(uFogParams.x, uFogParams.y, dist));
-  vec3 fogCol = (uFogParams.z > 0.5 || uFogParams.w > 0.5) ? uFogColor.rgb : skyGradient(normalize(vec3(dir.x, max(dir.y, 0.0), dir.z)));
-  return mix(color, fogCol, clamp(f, 0.0, 1.0));
-}
+uniform vec4 uSunPos;
+uniform vec4 uSunDisc;
+uniform vec4 uClouds;
+uniform vec4 uFx;
+uniform vec4 uCascades;
+uniform vec4 uShadowParams;
+uniform mat4 uShadow[4];
+uniform sampler2D uSkyLUT;
+uniform sampler2D uCloudMap;
+uniform highp sampler2DArrayShadow uShadowMap;
+${UTIL_GLSL}
+${SKY_FUNCS_GLSL}
 ${LIGHTING_GLSL}
 `;
 
@@ -91,7 +86,7 @@ void main() {
   albedo.rgb = mix(albedo.rgb, uOverlay.rgb, uOverlay.a);
   vec3 N = normalize(vN);
   vec3 V = normalize(-vRel);
-  vec3 color = surfaceLight(albedo.rgb, N, uLight.x, uLight.y, 1.0, 1.0, 0.25, 0.0, 0.5, V, uEmissive);
+  vec3 color = surfaceLight(albedo.rgb, N, N, vRel, uLight.x, uLight.y, 1.0, 0.25, 0.0, 0.5, V, uEmissive, 0.0);
   color = applyFog(color, vRel);
 #ifdef TRANSLUCENT
   outColor = vec4(color, albedo.a * uAlpha);
