@@ -26,3 +26,22 @@ test('M16: tela inicial com o mundo ao fundo, gráficos e começo do jogo', asyn
   expect(st.open).toBe(false);
   expect(errors.filter((e) => !/pointer ?lock|WrongDocument/i.test(e))).toEqual([]);
 });
+
+test('M16: escolher Criativo na tela inicial e trocar de modo na pausa', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/');
+  await expect(page.locator('.title-screen')).toBeVisible();
+  await waitWorldReady(page, 80);
+  await page.getByRole('button', { name: 'Criativo', exact: true }).click();
+  await page.getByRole('button', { name: 'Jogar' }).click();
+  await expect(page.locator('.title-screen')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as any).__lavra.game.player.gameMode)).toBe('creative');
+  // pausa: volta para Sobrevivência
+  await page.evaluate(() => (window as any).__lavra.game.openPause());
+  await expect(page.locator('.pause-box')).toBeVisible();
+  await page.getByRole('button', { name: 'Sobrevivência', exact: true }).click();
+  expect(await page.evaluate(() => (window as any).__lavra.game.player.gameMode)).toBe('survival');
+  await page.getByRole('button', { name: 'Voltar ao jogo' }).click();
+  await expect(page.locator('.pause-box')).toHaveCount(0);
+  expect(errors.filter((e) => !/pointer ?lock|WrongDocument/i.test(e))).toEqual([]);
+});

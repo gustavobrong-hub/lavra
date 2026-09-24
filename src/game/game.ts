@@ -649,19 +649,22 @@ export class Game {
     this.hud.setVisible(false);
     this.hideHand = true;
     this.ui.open(new TitleScreen({
-      play: () => this.play(),
-      newWorld: (seed) => { location.search = `?play=1&seed=${encodeURIComponent(seed || String(Math.floor(Math.random() * 1e9)))}`; },
+      play: (mode) => this.play(mode),
+      newWorld: (seed, mode) => {
+        const sd = encodeURIComponent(seed || String(Math.floor(Math.random() * 1e9)));
+        location.search = `?play=1&seed=${sd}${mode === 'creative' ? '&mode=creative' : ''}`;
+      },
       graphics: () => this.openGraphics(),
       controls: () => this.openControls(),
-    }));
+    }, this.attract.mode === 'creative' ? 'creative' : 'survival'));
   }
 
   /** Sai da vitrine e começa a jogar (manhã, no ponto de nascimento). */
-  play(): void {
+  play(mode?: GameMode): void {
     const a = this.attract;
     if (!a) return;
     this.attract = null;
-    this.player.setGameMode(a.mode);
+    this.player.setGameMode(mode ?? a.mode);
     this.dayTime = 1000;
     this.hud.setVisible(true);
     this.hideHand = false;
@@ -677,6 +680,8 @@ export class Game {
       graphics: () => this.openGraphics(),
       controls: () => this.openControls(),
       title: () => { location.search = ''; },
+      mode: () => (this.player.gameMode === 'creative' ? 'creative' : 'survival'),
+      setMode: (m) => { this.player.setGameMode(m); this.hud.setVisible(true); },
     }));
   }
 

@@ -192,3 +192,7 @@ html, body {
 .key-row { display: flex; gap: 10px; align-items: center; font-size: 14px; }
 .key-row kbd { font: 12px var(--mono); min-width: 118px; padding: 3px 7px; background: #262a33; border: 1px solid #ffffff2a; border-bottom-width: 3px; border-radius: 5px; text-align: center; }
 @media (max-width: 560px) { .set-row { grid-template-columns: 1fr; } .seg { grid-column: 1; } .keys { grid-template-columns: 1fr; } }
+
+.mode-seg { justify-content: center; margin-bottom: 4px; }
+.mode-seg .seg-btn { min-width: 128px; padding: 8px 12px; font-size: 14px; box-shadow: 0 4px 14px #0005; }
+.pause-mode { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 4px 0; }

@@ -9,11 +9,28 @@ function button(label: string, onClick: () => void, cls = 'btn'): HTMLButtonElem
   return b;
 }
 
+export type PlayMode = 'survival' | 'creative';
+
 export interface TitleActions {
-  play(): void;
-  newWorld(seed: string): void;
+  play(mode: PlayMode): void;
+  newWorld(seed: string, mode: PlayMode): void;
   graphics(): void;
   controls(): void;
+}
+
+/** Botões "Sobrevivência | Criativo" (segmentados). */
+function modePicker(get: () => PlayMode, set: (m: PlayMode) => void): HTMLElement {
+  const group = h('div', 'seg mode-seg');
+  const opts: [PlayMode, string][] = [['survival', 'Sobrevivência'], ['creative', 'Criativo']];
+  const btns = opts.map(([m, label]) => {
+    const b = h('button', 'seg-btn', label);
+    b.addEventListener('click', () => { set(m); refresh(); });
+    group.append(b);
+    return { m, b };
+  });
+  const refresh = () => { for (const { m, b } of btns) b.classList.toggle('on', m === get()); };
+  refresh();
+  return group;
 }
 
 export class TitleScreen implements Screen {
@@ -21,30 +38,35 @@ export class TitleScreen implements Screen {
   readonly pauses = false;
   readonly freesMouse = true;
 
-  constructor(a: TitleActions) {
+  constructor(a: TitleActions, initialMode: PlayMode = 'survival') {
     const logo = drawLogo('LAVRA', 18);
     logo.className = 'logo';
+    let mode: PlayMode = initialMode;
     const seedIn = h('input', 'seed-input') as HTMLInputElement;
     seedIn.placeholder = 'semente (opcional)';
     seedIn.maxLength = 32;
-    const newRow = h('div', 'new-world hidden', seedIn, button('Criar', () => a.newWorld(seedIn.value.trim())));
+    const newRow = h('div', 'new-world hidden', seedIn, button('Criar', () => a.newWorld(seedIn.value.trim(), mode)));
     this.el = h('div', 'screen title-screen',
       h('div', 'title-top', logo, h('div', 'tagline', 'sobreviver · construir · explorar')),
       h('div', 'menu-buttons',
-        button('Jogar', () => a.play(), 'btn big primary'),
+        modePicker(() => mode, (m) => { mode = m; }),
+        button('Jogar', () => a.play(mode), 'btn big primary'),
         button('Novo mundo', () => { newRow.classList.toggle('hidden'); if (!newRow.classList.contains('hidden')) seedIn.focus(); }, 'btn big'),
         newRow,
         h('div', 'menu-row',
           button('Gráficos', () => a.graphics(), 'btn'),
           button('Controles', () => a.controls(), 'btn'))),
       h('div', 'title-foot', 'Lavra 0.1 — texturas, criaturas e mundo gerados em código'));
-    seedIn.addEventListener('keydown', (e) => { if (e.code === 'Enter') a.newWorld(seedIn.value.trim()); e.stopPropagation(); });
+    seedIn.addEventListener('keydown', (e) => { if (e.code === 'Enter') a.newWorld(seedIn.value.trim(), mode); e.stopPropagation(); });
   }
 
   onKey(e: KeyboardEvent): boolean { return e.code === 'Escape'; }
 }
 
-export interface PauseActions { resume(): void; graphics(): void; controls(): void; title(): void }
+export interface PauseActions {
+  resume(): void; graphics(): void; controls(): void; title(): void;
+  mode(): PlayMode; setMode(m: PlayMode): void;
+}
 
 export class PauseScreen implements Screen {
   readonly el: HTMLDivElement;
@@ -55,6 +77,7 @@ export class PauseScreen implements Screen {
       h('div', 'pause-box',
         h('h2', '', 'Jogo pausado'),
         button('Voltar ao jogo', () => a.resume(), 'btn big primary'),
+        h('div', 'pause-mode', h('span', 'set-label', 'Modo de jogo'), modePicker(() => a.mode(), (m) => a.setMode(m))),
         h('div', 'menu-row', button('Gráficos', () => a.graphics()), button('Controles', () => a.controls())),
         button('Tela inicial', () => a.title(), 'btn big')));
   }
