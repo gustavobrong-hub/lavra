@@ -117,7 +117,7 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 
 ## M16 — Publicação
 - [x] Build de produção conferido (`npm run build` + carga sem erros)
-- [~] Publicação online (GitHub Pages)
+- [x] Publicação online: https://gustavobrong-hub.github.io/lavra/ (GitHub Pages via Actions a cada push na main)
 
 ## M17 — Polimento
 - [ ] Ciclo 1: jogar como jogador exigente, listar ≥ 20 problemas, corrigir os principais
@@ -140,3 +140,4 @@ Cada marco só fecha com: testes passando, zero erros no console, screenshots do
 - 2026-09-23 — Mudança de prioridade pedida: menos mecânicas específicas, foco na estética (referências: pôr do sol dourado no pântano, crepúsculo roxo com nuvens em blocos e água espelhada, noite nevada com lua, estrelas e chaminés).
 - 2026-09-23 — Estética (commit 1b17f16): LUT de céu físico, nuvens em blocos, sombras em cascata, água espelhada (corrigida a face de baixo que cobria a superfície), bloom, raios, lens flare, exposição automática, gradação. 60 FPS no Apple M4 com distância 12.
 - 2026-09-23 — Partículas e chaminés (commit 1cfd1c0); tela inicial, pausa e menus (commit a1da8af).
+- 2026-09-24 — Publicado em https://gustavobrong-hub.github.io/lavra/ (conferido com Playwright no site ao vivo).
