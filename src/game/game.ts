@@ -9,6 +9,8 @@ import { World } from '../world/world';
 import { WorldStreamer } from '../world/streamer';
 import { WorkerPool } from '../workers/pool';
 import { Pipeline } from '../render/pipeline';
+import { Particles } from '../render/particles';
+import { ParticleFx } from './fx/particlefx';
 import { Input } from '../input/input';
 import { DebugOverlay } from '../ui/debug';
 import { BIOMES } from '../world/gen/biomes';
@@ -85,6 +87,8 @@ export class Game {
   readonly player: Player;
   readonly interaction: Interaction;
   readonly entityRenderer = new EntityRenderer();
+  particles!: Particles;
+  private particleFx!: ParticleFx;
   readonly overlay = new BlockOverlay();
   readonly hand = new HandRenderer();
   readonly hud: Hud;
@@ -154,6 +158,9 @@ export class Game {
     this.interaction = new Interaction(this.level, this.player);
     this.opaqueScene.add(this.entityRenderer.group);
     this.transScene.add(this.overlay.group);
+    this.particles = new Particles(this.world);
+    this.transScene.add(this.particles.mesh);
+    this.particleFx = new ParticleFx(this.level, this.particles, () => this.settings.graphics.particles);
     initRecipes();
     installBlockEntities(this.level);
     installGolemBuilding(this.level);
@@ -303,6 +310,7 @@ export class Game {
     this.hand.update(p.inventory.held, swing, cam.bobPhase, cam.bobAmount, this.yaw, this.pitch, window.innerWidth / window.innerHeight,
       [(eyeLight >> 4) / 15, (eyeLight & 15) / 15], dt / 1000);
     const underwater = p.eyeInWater;
+    this.particles.update(dt / 1000, cam.x, cam.y, cam.z, this.pipeline.camera, 0, (this.level.gameTime + alpha) / 20);
     this.pipeline.render({
       camX: cam.x, camY: cam.y, camZ: cam.z, yaw: cam.yaw, pitch: cam.pitch, roll: cam.roll, fov: cam.fov,
       dayTime: this.dayTime + alpha, ticks: this.level.gameTime + alpha, rain: this.rain, thunder: this.thunder,
@@ -406,6 +414,11 @@ export class Game {
     this.level.tickBlocks();
     randomTicks(this.level, Math.floor(p.x) >> 4, Math.floor(p.z) >> 4, 8, this.level.rules.randomTickSpeed);
     this.fulgor.tick();
+    {
+      const pl = this.player;
+      const sky = this.pipeline.sky;
+      this.particleFx.tick(pl.x, pl.y + 1.6, pl.z, sky ? sky.night : 0, this.rain, this.level.gameTime / 20);
+    }
     this.spawner.tick();
     this.level.entities.tick((e) => e !== p);
     this.pickupItems();

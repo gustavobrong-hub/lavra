@@ -19,6 +19,8 @@ const SCENES = {
   meiodia: { pos: '612,90,-60', time: 6000, yaw: 140, pitch: 12, h: 8 },
   mardourado: { pos: '440,70,-12', time: 12330, yaw: 90, pitch: -3, h: 2 },
   vila: { pos: '3576,70,-3112', time: 17500, yaw: 180, pitch: 14, h: 9 },
+  vagalumes: { pos: '1000,70,-3992', time: 16000, yaw: 90, pitch: 2, h: 2 },
+  chuva: { pos: '612,90,-60', time: 5000, yaw: 140, pitch: 8, h: 3, rain: 1 },
 };
 const only = args.only ? args.only.split(',') : Object.keys(SCENES);
 const outDir = resolve(root, 'tests/.out/cenas');
@@ -36,7 +38,7 @@ for (const name of only) {
   const t0 = Date.now();
   await page.goto(`http://localhost:${port}/?seed=lavra&mode=creative&rd=${rd}&pos=${s.pos}&time=${s.time}&yaw=${s.yaw}&pitch=${s.pitch}${args.extra ?? ''}`);
   await page.waitForFunction(() => { const g = window.__lavra?.game; if (!g) return false; const st = g.streamer.stats; return g.ready && st.genQueue === 0 && st.meshQueue === 0 && st.meshInFlight === 0 && st.loaded > 60; }, null, { timeout: 240000, polling: 250 });
-  await page.evaluate(([T, yaw, pitch, h]) => {
+  await page.evaluate(([T, yaw, pitch, h, rain]) => {
     const g = window.__lavra.game;
     const p = g.player;
     const x = Math.floor(p.x), z = Math.floor(p.z);
@@ -45,11 +47,11 @@ for (const name of only) {
     p.setPos(x + 0.5, y + 1 + h - 1.62, z + 0.5);
     p.vx = p.vy = p.vz = 0;
     g.level.rules.doDaylightCycle = false; g.level.rules.doMobSpawning = false; g.level.rules.doWeatherCycle = false;
-    g.dayTime = T; g.level.rainLevel = 0; g.level.thunderLevel = 0;
+    g.dayTime = T; g.level.rainLevel = rain; g.level.thunderLevel = 0;
     g.player.flying = true;
     g.yaw = yaw; g.pitch = pitch;
     g.hud.setVisible(false); g.hideHand = true;
-  }, [s.time, s.yaw, s.pitch, s.h]);
+  }, [s.time, s.yaw, s.pitch, s.h, s.rain ?? 0]);
   if (args.js) await page.evaluate(args.js);
   await page.waitForTimeout(Number(args.wait ?? 2500));
   const out = resolve(outDir, `${name}-${tag}.png`);

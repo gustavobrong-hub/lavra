@@ -246,7 +246,7 @@ export class Pipeline {
       F.vec('fogColor', 0.6, 0.12, 0.01, 1.5);
       F.vec('fogParams', 0.5, 2.5, 0, 1);
     } else {
-      const dens = 0.0009 + f.rain * 0.01;
+      const dens = 0.0009 + f.rain * 0.0045;
       F.vec('fogColor', sky.fog[0], sky.fog[1], sky.fog[2], dens);
       F.vec('fogParams', rd * 0.7, rd * 0.98, 0, 0);
     }
@@ -266,7 +266,7 @@ export class Pipeline {
     const drift = f.ticks * 0.03;
     F.vec('clouds', mod(f.camX + drift, CLOUD_PERIOD), mod(f.camZ, CLOUD_PERIOD), clouds, CLOUD_Y - f.camY);
     F.vec('cloudLight', sky.cloudLight[0], sky.cloudLight[1], sky.cloudLight[2], f.rain);
-    const hfog = f.underwater || f.underLava ? 0 : 0.0011 + sky.sunset * 0.0032 + sky.night * 0.0012 + f.rain * 0.006;
+    const hfog = f.underwater || f.underLava ? 0 : 0.0011 + sky.sunset * 0.0032 + sky.night * 0.0012 + f.rain * 0.0035;
     F.vec('fx', hfog, sky.sunset, sky.night, sky.stars);
     F.vec('sunDisc', sky.sunDisc[0], sky.sunDisc[1], sky.sunDisc[2], -sky.celestial * Math.PI * 2);
     this.prevCam = [f.camX, f.camY, f.camZ];

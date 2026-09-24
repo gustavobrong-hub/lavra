@@ -55,7 +55,9 @@ vec3 skyIrradiance(vec3 N) {
   float ny = clamp(N.y, -1.0, 1.0);
   vec3 sky = mix(mix(side, up, 0.35), mix(up, avg, 0.35), max(ny, 0.0));
   vec3 ground = avg * vec3(0.34, 0.31, 0.26);
-  return mix(ground, sky, 0.5 + 0.5 * ny) * 1.6;
+  // à noite, um preenchimento azulado para as sombras da lua não ficarem pretas
+  vec3 nightFill = vec3(0.028, 0.04, 0.075) * uFx.z;
+  return mix(ground, sky, 0.5 + 0.5 * ny) * 1.6 + nightFill * (0.6 + 0.4 * max(ny, 0.0));
 }
 
 // Cor do "infinito" numa direção: céu acima do horizonte; abaixo, um mar distante refletindo o céu,

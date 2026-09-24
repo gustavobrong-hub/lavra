@@ -66,6 +66,16 @@ function roof(b: Build, w: number, d: number, h: number): void {
   }
 }
 
+/** Chaminé de pedra atravessando o telhado de duas águas, com uma fogueira acesa no alto (fumaça). */
+function chimney(b: Build, x: number, z: number, h: number, d: number): void {
+  const i = Math.min(z + 1, d - z);
+  const half = Math.floor((d + 2) / 2);
+  const top = Math.max(h + 1 + i + 1, h + half);
+  for (let y = h + 1; y <= top; y++) b.put(x, y, z, b.pal.foundation);
+  b.put(x, top + 1, z, 'campfire', { lit: true, facing: 'south' });
+}
+const hasChimney = (c: TplCtx) => c.style !== 'deserto' && c.style !== 'savana';
+
 /** Tocha de parede: `facing` aponta para longe da parede de apoio. */
 function light(b: Build, x: number, y: number, z: number, facing: string): void {
   b.put(x, y, z, 'wall_torch', { facing });
@@ -79,6 +89,7 @@ const casaPequena: Template = {
     b.door(2, 1, 4);
     window(b, 0, 2, 2); window(b, 4, 2, 2); window(b, 2, 2, 0);
     roof(b, 5, 5, 3);
+    if (hasChimney(c) && c.r() < 0.5) chimney(b, 3, 1, 3, 5);
     const bed = b.bed(1, 1, 2, 'north');
     b.put(3, 1, 1, 'crafting_table');
     light(b, 3, 3, 3, 'north');
@@ -94,6 +105,7 @@ const casaMedia: Template = {
     b.door(3, 1, 5);
     window(b, 1, 2, 5); window(b, 5, 2, 5); window(b, 0, 2, 2); window(b, 6, 2, 2); window(b, 2, 2, 0); window(b, 4, 2, 0);
     roof(b, 7, 6, 3);
+    if (hasChimney(c)) chimney(b, 5, 1, 3, 6);
     const b1 = b.bed(1, 1, 2, 'north');
     const b2 = b.bed(5, 1, 2, 'north');
     b.put(3, 1, 1, 'chest', { facing: 'south' });
@@ -118,6 +130,7 @@ const casaGrande: Template = {
     b.clear(7, 3, 1, 7, 3, 1);
     b.fill(7, 1, 1, 7, 3, 1, 'ladder', { facing: 'south' });
     roof(b, 9, 7, 6);
+    if (hasChimney(c)) chimney(b, 2, 1, 6, 7);
     const b1 = b.bed(1, 4, 2, 'north');
     const b2 = b.bed(3, 4, 2, 'north');
     const b3 = b.bed(5, 4, 2, 'north');
