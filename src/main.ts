@@ -47,8 +47,11 @@ function boot(): void {
       (window as unknown as { __gallery: unknown }).__gallery = setupGallery(game, gallery, parseFloat(params.get('zoom') ?? '1'));
     }, 100);
   }
-  canvas.addEventListener('click', () => game.input.requestLock());
+  canvas.addEventListener('click', () => { if (!game.ui.isOpen) game.input.requestLock(); });
   game.start();
+  // sem parâmetros de desenvolvimento na URL: tela inicial com o mundo ao fundo
+  const dev = ['seed', 'pos', 'time', 'gallery', 'play', 'mode', 'kit', 'debug', 'preset', 'rd', 'yaw', 'pitch'].some((k) => params.has(k));
+  if (!dev) game.showTitle();
 }
 
 boot();

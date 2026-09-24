@@ -11,6 +11,8 @@ import { WorkerPool } from '../workers/pool';
 import { Pipeline } from '../render/pipeline';
 import { Particles } from '../render/particles';
 import { ParticleFx } from './fx/particlefx';
+import { TitleScreen, PauseScreen, GraphicsScreen, ControlsScreen } from '../ui/screens/menus';
+import type { Screen } from '../ui/ui';
 import { Input } from '../input/input';
 import { DebugOverlay } from '../ui/debug';
 import { BIOMES } from '../world/gen/biomes';
@@ -120,6 +122,8 @@ export class Game {
   private raf = 0;
   /** pausa a simulação (menus) */
   paused = false;
+  /** vitrine do título: câmera panorâmica girando sobre o ponto de nascimento */
+  private attract: { t: number; x: number; y: number; z: number; mode: GameMode } | null = null;
   /** mundo pronto (chunks ao redor do jogador carregados) */
   ready = false;
   worldSpawn: [number, number, number] = [0, 100, 0];
@@ -177,8 +181,13 @@ export class Game {
     this.ui.closeKey = settings.controls.keys.inventory;
     this.ui.onChange = (s) => {
       this.input.enabled = !s;
+      this.paused = !!s && s.pauses;
       if (s) this.input.exitLock();
-      else if (!this.paused) this.input.requestLock();
+      else if (!this.attract) this.input.requestLock();
+    };
+    // Esc (perda do cursor) durante o jogo abre a pausa
+    this.input.onLockChange = (locked) => {
+      if (!locked && this.ready && !this.ui.isOpen && !this.attract && this.running) this.openPause();
     };
     this.interaction.onOpenBlock = (x, y, z, st) => this.openBlock(x, y, z, st);
     this.debug = new DebugOverlay(uiRoot, { lines: () => this.debugLines(), right: () => this.debugRight() });
@@ -299,6 +308,16 @@ export class Game {
     }
     const p = this.player;
     const cam = playerCamera(p, this.world, alpha, this.settings.graphics.fov, this.settings.graphics.viewBobbing, this.thirdPerson, this.yaw, this.pitch);
+    if (this.attract) {
+      // vitrine: panorâmica lenta do alto
+      const a = this.attract;
+      a.t += dt / 1000;
+      cam.x = a.x; cam.y = a.y; cam.z = a.z;
+      cam.yaw = Math.PI - ((62 + a.t * 2.6) * Math.PI) / 180;
+      cam.pitch = (5 * Math.PI) / 180;
+      cam.roll = 0; cam.bobAmount = 0;
+      cam.fov = this.settings.graphics.fov;
+    }
     this.streamer.setCenter(cam.x, cam.z, cam.yaw);
     this.streamer.update(5);
     // entidades e sobreposições
@@ -618,6 +637,62 @@ export class Game {
   private openScreen(s: ContainerScreen): void {
     s.onDropped = (items) => { for (const it of items) this.throwStack(it); };
     this.ui.open(s);
+  }
+
+  // ------------------------------------------------------------------ menus
+  /** Mostra a tela inicial com o mundo ao fundo (câmera panorâmica ao entardecer). */
+  showTitle(): void {
+    const p = this.player;
+    this.attract = { t: 0, x: p.x, y: p.y + 11, z: p.z, mode: p.gameMode };
+    p.setGameMode('creative');
+    this.dayTime = 12150;
+    this.hud.setVisible(false);
+    this.hideHand = true;
+    this.ui.open(new TitleScreen({
+      play: () => this.play(),
+      newWorld: (seed) => { location.search = `?play=1&seed=${encodeURIComponent(seed || String(Math.floor(Math.random() * 1e9)))}`; },
+      graphics: () => this.openGraphics(),
+      controls: () => this.openControls(),
+    }));
+  }
+
+  /** Sai da vitrine e começa a jogar (manhã, no ponto de nascimento). */
+  play(): void {
+    const a = this.attract;
+    if (!a) return;
+    this.attract = null;
+    this.player.setGameMode(a.mode);
+    this.dayTime = 1000;
+    this.hud.setVisible(true);
+    this.hideHand = false;
+    this.ui.closeAll(false);
+    this.input.enabled = true;
+    this.paused = false;
+    this.input.requestLock();
+  }
+
+  private openPause(): void {
+    this.ui.open(new PauseScreen({
+      resume: () => this.ui.close(),
+      graphics: () => this.openGraphics(),
+      controls: () => this.openControls(),
+      title: () => { location.search = ''; },
+    }));
+  }
+
+  private openGraphics(): void {
+    const scr: Screen = new GraphicsScreen(this.settings, () => this.applyGraphics(), () => this.ui.close());
+    this.ui.open(scr);
+  }
+
+  private openControls(): void {
+    this.ui.open(new ControlsScreen(this.settings, () => this.ui.close()));
+  }
+
+  /** Aplica mudanças de gráficos feitas nos menus. */
+  applyGraphics(): void {
+    this.streamer.renderDistance = this.settings.graphics.renderDistance;
+    this.onResize();
   }
 
   openInventory(): void {
